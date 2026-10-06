@@ -222,3 +222,13 @@
 .rss-preview-bar { flex-wrap: wrap; row-gap: 8px; }
 .rss-view button { white-space: nowrap; }
 @media (max-width: 1100px) { .rss-badge { display: none; } .rss-title { white-space: nowrap; } }
+
+/* document group tabs in the gallery */
+.rss-gal-groups { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.rss-gal-groups button { font: inherit; font-size: 12.5px; padding: 5px 12px; border: 1px solid #c8c6c4; border-radius: 16px; background: #fff; color: #323130; cursor: pointer; }
+.rss-gal-groups button span { color: var(--muted); margin-left: 2px; }
+.rss-gal-groups button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rss-gal-groups button.on span { color: #dbe9f7; }
+.rss-gal-groups button:disabled { opacity: .5; cursor: default; }
+.rss-gal-groups button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rss-gal-empty { grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }

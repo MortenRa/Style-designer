@@ -331,10 +331,15 @@ function renderPanel() {
     html += '<div class="rss-tabpanel" role="tabpanel">' + foldAll + (tab === 'theme' ? themeBody : headerBody) + '</div>';
 
     var nothing = s.themeMode === 'keep' && s.headerMode === 'keep';
+    // The group of the selected document; "Apply to" can cover the whole group.
+    var docGroup = groupOfReport(s.reportId);
+    s.applyGroup = docGroup ? docGroup.id : '';
+    if (s.applyTo === 'group' && !docGroup) s.applyTo = 'layout';
     var applyBar = '<div class="rss-applybar">' +
         '<div class="rss-summary">' + summaryText() + '</div>' +
         '<div class="rss-targets">Apply to ' +
-        '<label class="rss-radio"><input type="radio" name="rss-target" value="layout"' + (s.applyTo !== 'company' ? ' checked' : '') + '> this document</label>' +
+        '<label class="rss-radio"><input type="radio" name="rss-target" value="layout"' + (s.applyTo !== 'company' && s.applyTo !== 'group' ? ' checked' : '') + '> this document</label>' +
+        (docGroup ? '<label class="rss-radio" title="Every Body layout of the ' + docGroup.reports.length + ' reports in this group"><input type="radio" name="rss-target" value="group"' + (s.applyTo === 'group' ? ' checked' : '') + '> all ' + esc(docGroup.caption.toLowerCase()) + ' (' + docGroup.reports.length + ')</label>' : '') +
         '<label class="rss-radio"><input type="radio" name="rss-target" value="company"' + (s.applyTo === 'company' ? ' checked' : '') + '> company default</label></div>' +
         '<div class="rss-apply-actions">' +
         (s.themeMode === 'custom' ? '<button class="rss-secondary" data-save="theme">Only save the theme</button>' : '') +
@@ -579,7 +584,8 @@ function tableThumb(styleId, c) {
 // The current theme and header/footer on several documents at once, first page each, rendered one after another
 // by the same private preview as "This document". Results are cached per document and style.
 
-var GALLERY_MAX = 6;
+var GALLERY_MAX = 6;          // own selection
+var GALLERY_GROUP_MAX = 12;   // a document group
 // Typical customer-facing documents, preferred when the gallery is filled for the first time.
 var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
 var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '' };
@@ -603,6 +609,27 @@ function setView(view) {
 
 function docKey(l) { return l.reportId + '|' + l.name; }
 
+function groupOfReport(reportId) {
+    return (studio.data.groups || []).filter(function (g) { return g.reports.indexOf(reportId) >= 0; })[0];
+}
+
+function galleryGroup() {
+    var g = null;
+    try { g = localStorage.getItem('rss-gallery-group'); } catch (e) { g = null; }
+    if (g === 'mine' || (studio.data.groups || []).some(function (x) { return x.id === g; })) return g;
+    var own = groupOfReport(studio.state.reportId);
+    return own ? own.id : 'mine';
+}
+
+// One layout per report of a group: the one the report prints with, else its first Body layout.
+function groupDocs(group) {
+    var layouts = studio.data.layouts;
+    return group.reports.map(function (id) {
+        var mine = layouts.filter(function (l) { return l.reportId === id; });
+        return mine.filter(function (l) { return l.isDefault; })[0] || mine[0];
+    }).filter(Boolean);
+}
+
 function styleKey() {
     var s = studio.state, copy = {};
     Object.keys(s).forEach(function (k) { if (['reportId', 'layoutName', 'layoutAppId', 'hasData', 'applyTo', 'themeName', 'hfName'].indexOf(k) < 0) copy[k] = s[k]; });
@@ -610,6 +637,9 @@ function styleKey() {
 }
 
 function galleryDocs() {
+    var groupId = galleryGroup();
+    var group = (studio.data.groups || []).filter(function (g) { return g.id === groupId; })[0];
+    if (group) return groupDocs(group).slice(0, GALLERY_GROUP_MAX);
     var keys = null, layouts = studio.data.layouts;
     try { keys = JSON.parse(localStorage.getItem('rss-gallery-docs') || 'null'); } catch (e) { keys = null; }
     var docs = (keys || []).map(function (k) { return layouts.filter(function (l) { return docKey(l) === k; })[0]; }).filter(Boolean);
@@ -634,18 +664,28 @@ function refreshGallery(delay) {
 function renderGallery() {
     var host = byId('rss-gallery');
     if (!host || studio.view !== 'gallery') return;
-    var docs = galleryDocs(), style = styleKey();
+    var docs = galleryDocs(), style = styleKey(), groupId = galleryGroup(), groups = studio.data.groups || [];
+    var group = groups.filter(function (g) { return g.id === groupId; })[0];
     gallery.queue = [];
-    var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
-        '<span class="rss-gal-note">The current theme and header/footer on your documents. Click a page to open it.</span></div><div class="rss-gal-grid">';
+    var tabs = groups.map(function (g) {
+        return '<button class="' + (g.id === groupId ? 'on' : '') + '" data-ggroup="' + g.id + '"' + (g.reports.length ? '' : ' disabled') + '>' +
+            esc(g.caption) + ' <span>' + g.reports.length + '</span></button>';
+    }).join('') + '<button class="' + (groupId === 'mine' ? 'on' : '') + '" data-ggroup="mine">My selection</button>';
+    var more = group && group.reports.length > docs.length ? ' Showing ' + docs.length + ' of ' + group.reports.length + ' reports.' : '';
+    var html = '<div class="rss-gal-groups" role="tablist">' + tabs + '</div>' +
+        '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
+        '<span class="rss-gal-note">' + (group
+            ? 'Each report in ' + esc(group.caption.toLowerCase()) + ' with the layout it prints with.' + more
+            : 'Your own pick of documents.') + ' Click a page to open it.</span></div><div class="rss-gal-grid">';
+    if (group && !docs.length) html += '<div class="rss-gal-empty">No document in this group has a Body layout yet.</div>';
     docs.forEach(function (l, i) {
         html += '<div class="rss-gal-card" data-doc="' + esc(docKey(l)) + '">' +
             '<div class="rss-gal-top"><div class="rss-gal-name"><b>' + esc(l.reportName) + ' <span>' + l.reportId + '</span></b><small>' + esc(l.caption || l.name) + '</small></div>' +
-            '<button class="rss-gal-x" data-remove="' + i + '" title="Remove from the gallery" aria-label="Remove ' + esc(l.reportName) + '">×</button></div>' +
+            (group ? '' : '<button class="rss-gal-x" data-remove="' + i + '" title="Remove from the gallery" aria-label="Remove ' + esc(l.reportName) + '">×</button>') + '</div>' +
             '<button class="rss-gal-page" data-open="' + i + '" aria-label="Open ' + esc(l.reportName) + '"><div class="rss-gal-thumb" id="rss-gal-' + i + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div></button>' +
             '<div class="rss-gal-foot"><button class="rss-link" data-gdata="' + l.reportId + '">Preview data…</button><span id="rss-gal-pages-' + i + '"></span></div></div>';
     });
-    if (docs.length < GALLERY_MAX) {
+    if (!group && docs.length < GALLERY_MAX) {
         html += '<div class="rss-gal-card add">' + (gallery.adding
             ? '<input class="rss-input" id="rss-gal-find" type="search" placeholder="Add a document: search report or layout" value="' + esc(gallery.find) + '" autocomplete="off"><div class="rss-gal-results" id="rss-gal-results"></div>'
             : '<button class="rss-gal-addbtn" id="rss-gal-add"><span>+</span>Add document</button>') + '</div>';
@@ -655,6 +695,13 @@ function renderGallery() {
     docs.forEach(function (l, i) {
         var hit = gallery.cache[docKey(l) + '|' + style];
         if (hit) showGalleryResult(i, hit); else gallery.queue.push({ index: i, doc: l, key: docKey(l) + '|' + style });
+    });
+    host.querySelectorAll('[data-ggroup]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            try { localStorage.setItem('rss-gallery-group', b.getAttribute('data-ggroup')); } catch (e) { /* the group of the document is used */ }
+            gallery.adding = false;
+            renderGallery();
+        });
     });
     host.querySelectorAll('[data-open]').forEach(function (b) {
         b.addEventListener('click', function () { openFromGallery(docs[+b.getAttribute('data-open')]); });

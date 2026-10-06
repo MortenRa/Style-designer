@@ -12,6 +12,7 @@ codeunit 50104 "Report Style Designer Mgt."
     Access = Internal;
     var
         ConfiguratorMgt: Codeunit "Report Style Configurator Mgt.";
+        DocGroups: Codeunit "Report Style Doc Groups";
         PreviewPrefixTok: Label 'Preview ', Locked = true;
         HeaderFooterBaseTok: Label 'ExternalDefaultDetailedHFDesign', Locked = true;
         PreviewBusyErr: Label 'This report is being previewed in another window. Try again in a moment.';
@@ -59,6 +60,7 @@ codeunit 50104 "Report Style Designer Mgt."
             Copilot.Add('suggestions', Suggestions);
         Copilot.Add('customPalette', Enum::"Report Style Palette"::Custom.AsInteger());
         Data.Add('customPageId', Enum::"Report Style Page Color"::Custom.AsInteger());
+        Data.Add('groups', DocGroups.GetGroups());
         Data.Add('copilot', Copilot);
         Data.Add('layouts', GetBodyLayouts());
         Data.Add('themes', GetThemes());
@@ -116,6 +118,8 @@ codeunit 50104 "Report Style Designer Mgt."
             Config."Header Mode" := CopyStr(Token.AsValue().AsText(), 1, MaxStrLen(Config."Header Mode"));
         if State.Get('applyTo', Token) then
             Config."Apply To" := CopyStr(Token.AsValue().AsText(), 1, MaxStrLen(Config."Apply To"));
+        if State.Get('applyGroup', Token) then
+            Config."Apply Group" := CopyStr(Token.AsValue().AsText(), 1, MaxStrLen(Config."Apply Group"));
         if State.Get('hfLogo', Token) then
             Config."HF Logo" := CopyStr(Token.AsValue().AsText(), 1, MaxStrLen(Config."HF Logo"));
         if State.Get('hfPageNumber', Token) then
@@ -428,25 +432,17 @@ codeunit 50104 "Report Style Designer Mgt."
         end;
 
         ForCompany := ModeOr(Config."Apply To", 'layout') = 'company';
+        if Config."Apply To" = 'group' then begin
+            // No group level exists in Business Central: assign every Body layout of the group's reports.
+            Result.Append(StrSubstNo('%1 updated (%2 layouts): ', DocGroups.GroupCaption(Config."Apply Group"), ApplyToGroup(Config)));
+            Result.Append(StrSubstNo('theme %1, header/footer %2.', ModeCaption(ThemeMode(Config)), ModeCaption(HeaderMode(Config))));
+            exit(Result.ToText());
+        end;
         if not ForCompany then begin
             ConfiguratorMgt.ValidateBodyLayout(Config);
             LayoutKey := CopyStr(ConfiguratorMgt.EncodePartName(Config."Target Layout App ID", Config."Target Layout Name"), 1, 250);
         end;
-
-        case ThemeMode(Config) of
-            'custom':
-                SetPart(ForCompany, Config."Target Report ID", LayoutKey, false, ConfiguratorMgt.EncodePartName(EmptyGuid, Config."Theme Name"));
-            'default':
-                SetPart(ForCompany, Config."Target Report ID", LayoutKey, false, '');
-        end;
-        case HeaderMode(Config) of
-            'custom':
-                SetPart(ForCompany, Config."Target Report ID", LayoutKey, true, HeaderPartRef(Config));
-            'design':
-                SetPart(ForCompany, Config."Target Report ID", LayoutKey, true, ConfiguratorMgt.EncodePartName(EmptyGuid, Config."HF Name"));
-            'default':
-                SetPart(ForCompany, Config."Target Report ID", LayoutKey, true, '');
-        end;
+        ApplyParts(Config, ForCompany, Config."Target Report ID", LayoutKey);
 
         if ForCompany then
             Result.Append(StrSubstNo('Company default for %1 updated: ', CompanyName()))
@@ -458,6 +454,46 @@ codeunit 50104 "Report Style Designer Mgt."
 
     // Writes one part at the target level (this layout for all companies, or this company's default) and leaves
     // the other part as it is. An empty value clears the assignment so lower levels apply again.
+    /// Writes the chosen theme and header/footer to one assignment (one layout, or the company default).
+    local procedure ApplyParts(Config: Record "Report Style Config"; ForCompany: Boolean; ReportID: Integer; LayoutKey: Text[250])
+    var
+        EmptyGuid: Guid;
+    begin
+        case ThemeMode(Config) of
+            'custom':
+                SetPart(ForCompany, ReportID, LayoutKey, false, ConfiguratorMgt.EncodePartName(EmptyGuid, Config."Theme Name"));
+            'default':
+                SetPart(ForCompany, ReportID, LayoutKey, false, '');
+        end;
+        case HeaderMode(Config) of
+            'custom':
+                SetPart(ForCompany, ReportID, LayoutKey, true, HeaderPartRef(Config));
+            'design':
+                SetPart(ForCompany, ReportID, LayoutKey, true, ConfiguratorMgt.EncodePartName(EmptyGuid, Config."HF Name"));
+            'default':
+                SetPart(ForCompany, ReportID, LayoutKey, true, '');
+        end;
+    end;
+
+    /// "Apply to this group": the same assignment for every Body layout of every report in the group.
+    local procedure ApplyToGroup(Config: Record "Report Style Config") Layouts: Integer
+    var
+        ReportLayoutList: Record "Report Layout List";
+        ReportID: Integer;
+    begin
+        foreach ReportID in DocGroups.ReportsOf(Config."Apply Group") do begin
+            ReportLayoutList.SetRange("Report ID", ReportID);
+            ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Body);
+            if ReportLayoutList.FindSet() then
+                repeat
+                    ApplyParts(Config, false, ReportID, CopyStr(ConfiguratorMgt.EncodePartName(ReportLayoutList."Application ID", ReportLayoutList.Name), 1, 250));
+                    Layouts += 1;
+                until ReportLayoutList.Next() = 0;
+        end;
+        if Layouts = 0 then
+            Error('There are no documents with a Body layout in %1.', DocGroups.GroupCaption(Config."Apply Group"));
+    end;
+
     local procedure SetPart(ForCompany: Boolean; ReportID: Integer; LayoutKey: Text[250]; IsHeader: Boolean; Value: Text)
     var
         Cfg: Record "Tenant Report Layout Cfg";
@@ -615,6 +651,7 @@ codeunit 50104 "Report Style Designer Mgt."
         State.Add('themeMode', ModeOr(Config."Theme Mode", 'custom'));
         State.Add('headerMode', ModeOr(Config."Header Mode", 'keep'));
         State.Add('applyTo', ModeOr(Config."Apply To", 'layout'));
+        State.Add('applyGroup', Config."Apply Group");
         State.Add('hfLogo', ModeOr(Config."HF Logo", 'right'));
         State.Add('hfPageNumber', ModeOr(Config."HF Page Number", 'header'));
         State.Add('hfShowDate', Config."HF Show Date");
@@ -659,6 +696,18 @@ codeunit 50104 "Report Style Designer Mgt."
             exit('');
     end;
 
+    /// The layout the report prints with for everyone in this company (the selection without a user).
+    local procedure IsDefaultLayout(var ReportLayoutList: Record "Report Layout List"): Boolean
+    var
+        Selection: Record "Tenant Report Layout Selection";
+        EmptyGuid: Guid;
+    begin
+        if not Selection.Get(ReportLayoutList."Report ID", CompanyName(), EmptyGuid) then
+            if not Selection.Get(ReportLayoutList."Report ID", '', EmptyGuid) then
+                exit(false);
+        exit((Selection."Layout Name" = ReportLayoutList.Name) and (Selection."App ID" = ReportLayoutList."Application ID"));
+    end;
+
     /// A page colour from the browser: must be a valid colour, and is lightened if it would print too dark.
     local procedure CustomPageFromJson(Token: JsonToken): Text[10]
     var
@@ -687,6 +736,7 @@ codeunit 50104 "Report Style Designer Mgt."
                 Item.Add('caption', CaptionOf(ReportLayoutList));
                 Item.Add('appId', LowerCase(Format(ReportLayoutList."Application ID", 0, 4)));
                 Item.Add('status', Format(ReportLayoutList."Layout Status"));
+                Item.Add('isDefault', IsDefaultLayout(ReportLayoutList));
                 AddCurrentParts(Item, ReportLayoutList."Report ID", CopyStr(ConfiguratorMgt.EncodePartName(ReportLayoutList."Application ID", ReportLayoutList.Name), 1, 250));
                 Layouts.Add(Item);
             until ReportLayoutList.Next() = 0;

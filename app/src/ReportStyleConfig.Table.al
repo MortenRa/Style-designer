@@ -63,6 +63,8 @@ table 50100 "Report Style Config"
         field(26; "Custom Colors"; Text[250]) { Caption = 'Custom colours'; }
         // The page colour (hex) when "Page Color" = Custom; always light, so it prints.
         field(27; "Custom Page Color"; Text[10]) { Caption = 'Custom page colour'; }
+        // With Apply To = group: customer, vendor or internal (see "Report Style Doc Groups").
+        field(28; "Apply Group"; Text[20]) { Caption = 'Apply to group'; }
     }
 
     keys
