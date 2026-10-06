@@ -11,6 +11,8 @@ permissionset 50100 "REPORT STYLE DESIGN"
     // which are platform tables.
     Permissions =
         tabledata "Report Style Config" = RIMD,
+        tabledata "Report Style Preview Data" = RIMD,
+        table "Report Style Preview Data" = X,
         tabledata "Tenant Report Layout" = RIMD,
         tabledata "Tenant Report Layout Cfg" = RIMD,
         tabledata "Tenant Report Layout Selection" = RIMD,

@@ -24,10 +24,16 @@ controladdin "Report Style Designer"
     event CopilotRequested(State: Text; LogoColors: Text);
     // "Browse all…" in the document picker: choose a Body layout on a full list page.
     event BrowseLayoutsRequested(State: Text);
+    // "Your documents" gallery: render the current style on another Body layout, and choose that report's preview data.
+    event GalleryRequested(State: Text; ReportId: Integer; LayoutName: Text; LayoutAppId: Text; Seq: Integer);
+    event GalleryChooseDataRequested(State: Text; ReportId: Integer);
 
     procedure Init(Data: Text);
     procedure ShowPreview(Seq: Integer; Base64Pdf: Text);
     procedure ShowPreviewError(Seq: Integer; Message: Text);
     procedure Notify(Message: Text; Kind: Text);
     procedure SetHasData(HasData: Boolean);
+    procedure ShowGalleryPage(Seq: Integer; Base64Pdf: Text);
+    procedure ShowGalleryError(Seq: Integer; Message: Text);
+    procedure GalleryDataChanged(ReportId: Integer);
 }

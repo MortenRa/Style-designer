@@ -72,6 +72,32 @@ page 50102 "Report Style Designer"
                     CurrPage.Designer.SetHasData(false);
                 end;
 
+                trigger GalleryRequested(State: Text; ReportId: Integer; LayoutName: Text; LayoutAppId: Text; Seq: Integer)
+                var
+                    GalleryRec: Record "Report Style Config" temporary;
+                    Runner: Codeunit "Report Style Designer Runner";
+                    Pdf: Codeunit "Temp Blob";
+                    Base64Convert: Codeunit "Base64 Convert";
+                begin
+                    // Same per-user preview as the main one, on a temporary copy aimed at the gallery document.
+                    DesignerMgt.ApplyState(Config, State);
+                    Commit();
+                    DesignerMgt.GalleryConfig(Config, ReportId, LayoutName, LayoutAppId, GalleryRec);
+                    if Runner.Preview(GalleryRec) then begin
+                        Runner.GetPdf(Pdf);
+                        CurrPage.Designer.ShowGalleryPage(Seq, Base64Convert.ToBase64(Pdf.CreateInStream()));
+                    end else
+                        CurrPage.Designer.ShowGalleryError(Seq, Runner.GetErrorText());
+                end;
+
+                trigger GalleryChooseDataRequested(State: Text; ReportId: Integer)
+                begin
+                    DesignerMgt.ApplyState(Config, State);
+                    Commit();
+                    if DesignerMgt.ChooseGalleryData(ReportId) then
+                        CurrPage.Designer.GalleryDataChanged(ReportId);
+                end;
+
                 trigger BrowseLayoutsRequested(State: Text)
                 var
                     ConfiguratorMgt: Codeunit "Report Style Configurator Mgt.";

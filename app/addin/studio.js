@@ -21,10 +21,14 @@ function StudioInit(root) {
         '  <section class="rss-preview">' +
         '    <header class="rss-preview-bar">' +
         '      <div class="rss-title">Report Style Designer</div>' +
+        '      <div class="rss-view" role="tablist" aria-label="Preview">' +
+        '        <button class="on" data-view="single" role="tab" aria-selected="true">This document</button>' +
+        '        <button data-view="gallery" role="tab" aria-selected="false">Your documents</button></div>' +
         '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until you apply.</div>' +
         '    </header>' +
         '    <div class="rss-stage" id="rss-stage">' +
         '      <div class="rss-pages" id="rss-pages"></div>' +
+        '      <div class="rss-gallery" id="rss-gallery" hidden></div>' +
         '      <div class="rss-overlay" id="rss-overlay"><div class="rss-spinner"></div><div id="rss-overlay-text">Rendering preview…</div></div>' +
         '      <div class="rss-error" id="rss-error" hidden></div>' +
         '    </div>' +
@@ -32,6 +36,9 @@ function StudioInit(root) {
         '  <aside class="rss-panel" id="rss-panel"><div class="rss-loading">Loading…</div></aside>' +
         '  <div class="rss-toast" id="rss-toast" hidden></div>' +
         '</div>';
+    root.querySelectorAll('[data-view]').forEach(function (b) {
+        b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
+    });
     document.addEventListener('mousedown', function (e) {
         var combo = byId('rss-combo');
         if (studio.pickerOpen && combo && !combo.contains(e.target)) closePicker();
@@ -90,6 +97,7 @@ function Notify(message, kind) {
 
 function SetHasData(hasData) {
     studio.state.hasData = hasData;
+    GalleryDataChanged(studio.state.reportId);
     renderPanel();
     requestPreview(0);
 }
@@ -97,6 +105,8 @@ function SetHasData(hasData) {
 /* ---------- preview pipeline ---------- */
 
 function requestPreview(delay) {
+    // In the gallery the style goes to every shown document instead of the single preview.
+    if (studio.view === 'gallery') { refreshGallery(delay); return; }
     clearTimeout(studio.debounce);
     studio.debounce = setTimeout(sendPreview, delay === undefined ? 450 : delay);
 }
@@ -116,6 +126,7 @@ function afterResponse() {
         sendPreview();
     } else {
         hide('rss-overlay');
+        pumpGallery();
     }
 }
 
@@ -563,6 +574,218 @@ function tableThumb(styleId, c) {
         rows +
         '<div class="rss-tt-row total" style="border-top:' + total + ';border-bottom:' + totalBottom + '"><i style="background:' + text + '"></i><i style="background:' + text + '"></i></div>' +
         '</div>';
+}
+
+/* ---------- "Your documents" gallery ---------- */
+// The current theme and header/footer on several documents at once, first page each, rendered one after another
+// by the same private preview as "This document". Results are cached per document and style.
+
+var GALLERY_MAX = 6;
+// Typical customer-facing documents, preferred when the gallery is filled for the first time.
+var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
+var gallery = { cache: {}, queue: [], inflight: null, seq: 0, timer: null, adding: false, find: '' };
+
+function setView(view) {
+    if (studio.view === view || !studio.data) return;
+    studio.view = view;
+    studio.root.querySelectorAll('[data-view]').forEach(function (b) {
+        var on = b.getAttribute('data-view') === view;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-selected', on);
+    });
+    var g = byId('rss-gallery');
+    g.hidden = view !== 'gallery';
+    byId('rss-pages').hidden = view === 'gallery';
+    hide('rss-error');
+    if (view === 'gallery') { hide('rss-overlay'); refreshGallery(0); }
+    else { gallery.queue = []; requestPreview(0); }
+}
+
+function docKey(l) { return l.reportId + '|' + l.name; }
+
+function styleKey() {
+    var s = studio.state, copy = {};
+    Object.keys(s).forEach(function (k) { if (['reportId', 'layoutName', 'layoutAppId', 'hasData', 'applyTo', 'themeName', 'hfName'].indexOf(k) < 0) copy[k] = s[k]; });
+    return JSON.stringify(copy);
+}
+
+function galleryDocs() {
+    var keys = null, layouts = studio.data.layouts;
+    try { keys = JSON.parse(localStorage.getItem('rss-gallery-docs') || 'null'); } catch (e) { keys = null; }
+    var docs = (keys || []).map(function (k) { return layouts.filter(function (l) { return docKey(l) === k; })[0]; }).filter(Boolean);
+    if (keys && docs.length) return docs;
+    // First time: the selected document, then typical documents, one layout per report.
+    var seen = {}, add = function (l) { if (l && !seen[l.reportId] && docs.length < GALLERY_MAX) { seen[l.reportId] = true; docs.push(l); } };
+    add(findLayout(studio.state.reportId, studio.state.layoutName));
+    GALLERY_PREFERRED.forEach(function (id) { add(layouts.filter(function (l) { return l.reportId === id; })[0]); });
+    layouts.forEach(add);
+    return docs;
+}
+
+function saveGalleryDocs(docs) {
+    try { localStorage.setItem('rss-gallery-docs', JSON.stringify(docs.map(docKey))); } catch (e) { /* storage blocked: the default set is used */ }
+}
+
+function refreshGallery(delay) {
+    clearTimeout(gallery.timer);
+    gallery.timer = setTimeout(renderGallery, delay === undefined ? 450 : delay);
+}
+
+function renderGallery() {
+    var host = byId('rss-gallery');
+    if (!host || studio.view !== 'gallery') return;
+    var docs = galleryDocs(), style = styleKey();
+    gallery.queue = [];
+    var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
+        '<span class="rss-gal-note">The current theme and header/footer on your documents. Click a page to open it.</span></div><div class="rss-gal-grid">';
+    docs.forEach(function (l, i) {
+        html += '<div class="rss-gal-card" data-doc="' + esc(docKey(l)) + '">' +
+            '<div class="rss-gal-top"><div class="rss-gal-name"><b>' + esc(l.reportName) + ' <span>' + l.reportId + '</span></b><small>' + esc(l.caption || l.name) + '</small></div>' +
+            '<button class="rss-gal-x" data-remove="' + i + '" title="Remove from the gallery" aria-label="Remove ' + esc(l.reportName) + '">×</button></div>' +
+            '<button class="rss-gal-page" data-open="' + i + '" aria-label="Open ' + esc(l.reportName) + '"><div class="rss-gal-thumb" id="rss-gal-' + i + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div></button>' +
+            '<div class="rss-gal-foot"><button class="rss-link" data-gdata="' + l.reportId + '">Preview data…</button><span id="rss-gal-pages-' + i + '"></span></div></div>';
+    });
+    if (docs.length < GALLERY_MAX) {
+        html += '<div class="rss-gal-card add">' + (gallery.adding
+            ? '<input class="rss-input" id="rss-gal-find" type="search" placeholder="Add a document: search report or layout" value="' + esc(gallery.find) + '" autocomplete="off"><div class="rss-gal-results" id="rss-gal-results"></div>'
+            : '<button class="rss-gal-addbtn" id="rss-gal-add"><span>+</span>Add document</button>') + '</div>';
+    }
+    host.innerHTML = html + '</div>';
+
+    docs.forEach(function (l, i) {
+        var hit = gallery.cache[docKey(l) + '|' + style];
+        if (hit) showGalleryResult(i, hit); else gallery.queue.push({ index: i, doc: l, key: docKey(l) + '|' + style });
+    });
+    host.querySelectorAll('[data-open]').forEach(function (b) {
+        b.addEventListener('click', function () { openFromGallery(docs[+b.getAttribute('data-open')]); });
+    });
+    host.querySelectorAll('[data-remove]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var rest = docs.filter(function (_, i) { return i !== +b.getAttribute('data-remove'); });
+            if (!rest.length) return;
+            saveGalleryDocs(rest);
+            renderGallery();
+        });
+    });
+    host.querySelectorAll('[data-gdata]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('GalleryChooseDataRequested', [JSON.stringify(studio.state), +b.getAttribute('data-gdata')]);
+        });
+    });
+    var addBtn = byId('rss-gal-add');
+    if (addBtn) addBtn.addEventListener('click', function () { gallery.adding = true; gallery.find = ''; renderGallery(); byId('rss-gal-find').focus(); });
+    var find = byId('rss-gal-find');
+    if (find) {
+        find.addEventListener('input', function () { gallery.find = find.value; renderGalleryResults(docs); });
+        find.addEventListener('keydown', function (e) { if (e.key === 'Escape') { gallery.adding = false; renderGallery(); } });
+        renderGalleryResults(docs);
+    }
+    updateGalleryStatus();
+    pumpGallery();
+}
+
+function renderGalleryResults(docs) {
+    var list = byId('rss-gal-results');
+    if (!list) return;
+    var shown = docs.map(docKey), words = gallery.find.toLowerCase().split(/\s+/).filter(Boolean);
+    var hits = studio.data.layouts.filter(function (l) {
+        var text = (l.reportName + ' ' + l.reportId + ' ' + (l.caption || '') + ' ' + l.name).toLowerCase();
+        return shown.indexOf(docKey(l)) < 0 && words.every(function (w) { return text.indexOf(w) >= 0; });
+    }).slice(0, 6);
+    list.innerHTML = hits.length
+        ? hits.map(function (l, i) { return '<div class="rss-pick" data-gadd="' + i + '"><b>' + esc(l.reportName) + ' <span>' + l.reportId + '</span></b><small>' + esc(l.caption || l.name) + '</small></div>'; }).join('')
+        : '<div class="rss-pick-empty">No other Body layout matches.</div>';
+    list.querySelectorAll('[data-gadd]').forEach(function (el) {
+        el.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            saveGalleryDocs(docs.concat([hits[+el.getAttribute('data-gadd')]]));
+            gallery.adding = false;
+            renderGallery();
+        });
+    });
+}
+
+function pumpGallery() {
+    if (gallery.inflight || studio.busy || studio.view !== 'gallery') return;
+    var next = gallery.queue.shift();
+    if (!next) { updateGalleryStatus(); return; }
+    gallery.seq += 1;
+    gallery.inflight = { seq: gallery.seq, index: next.index, key: next.key };
+    var box = byId('rss-gal-' + next.index);
+    if (box) box.innerHTML = '<div class="rss-gal-wait"><div class="rss-spinner"></div>Rendering…</div>';
+    updateGalleryStatus();
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('GalleryRequested',
+        [JSON.stringify(studio.state), next.doc.reportId, next.doc.name, next.doc.appId || '', gallery.seq]);
+}
+
+function ShowGalleryPage(seq, base64Pdf) { galleryResponse(seq, { pdf: base64Pdf }); }
+function ShowGalleryError(seq, message) { galleryResponse(seq, { error: message }); }
+
+function galleryResponse(seq, result) {
+    var job = gallery.inflight;
+    gallery.inflight = null;
+    if (job && job.seq === seq) {
+        gallery.cache[job.key] = result;
+        // Only draw when the card still shows that document in that style.
+        var card = byId('rss-gal-' + job.index);
+        if (card && job.key === card.closest('[data-doc]').getAttribute('data-doc') + '|' + styleKey()) showGalleryResult(job.index, result);
+    }
+    pumpGallery();
+}
+
+function GalleryDataChanged(reportId) {
+    Object.keys(gallery.cache).forEach(function (k) { if (k.indexOf(reportId + '|') === 0) delete gallery.cache[k]; });
+    if (studio.view === 'gallery') renderGallery();
+}
+
+function showGalleryResult(index, result) {
+    var box = byId('rss-gal-' + index);
+    if (!box) return;
+    if (result.error) {
+        box.innerHTML = '<div class="rss-gal-err">' + esc(result.error) + '</div>';
+        updateGalleryStatus();
+        return;
+    }
+    var pdfjsLib = globalThis.pdfjsLib;
+    if (!pdfjsLib) { box.innerHTML = '<div class="rss-gal-err">The PDF viewer could not be loaded.</div>'; return; }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn-bc.dynamics.com/common/js/pdfjs-4.10.38/pdf.worker.min.mjs';
+    var raw = atob(result.pdf), bytes = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    pdfjsLib.getDocument({ data: bytes }).promise.then(function (pdf) {
+        return pdf.getPage(1).then(function (page) {
+            var base = page.getViewport({ scale: 1 });
+            var width = Math.max(160, box.clientWidth || 240), ratio = window.devicePixelRatio || 1;
+            var viewport = page.getViewport({ scale: width / base.width });
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.floor(viewport.width * ratio);
+            canvas.height = Math.floor(viewport.height * ratio);
+            canvas.style.width = '100%';
+            return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport, transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null }).promise.then(function () {
+                box.innerHTML = '';
+                box.appendChild(canvas);
+                var more = byId('rss-gal-pages-' + index);
+                if (more) more.textContent = pdf.numPages > 1 ? pdf.numPages + ' pages' : '1 page';
+                updateGalleryStatus();
+            });
+        });
+    }).catch(function () { box.innerHTML = '<div class="rss-gal-err">This page could not be shown.</div>'; });
+}
+
+function updateGalleryStatus() {
+    var el = byId('rss-gal-status');
+    if (!el) return;
+    var left = gallery.queue.length + (gallery.inflight ? 1 : 0);
+    el.textContent = left ? 'Rendering… ' + left + ' to go' : '';
+}
+
+function openFromGallery(l) {
+    var s = studio.state;
+    s.reportId = l.reportId;
+    s.layoutName = l.name;
+    s.layoutAppId = l.appId;
+    rememberLayout(l);
+    renderPanel();
+    setView('single');
 }
 
 /* ---------- document picker ---------- */

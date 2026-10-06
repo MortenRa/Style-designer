@@ -512,13 +512,89 @@ codeunit 50104 "Report Style Designer Mgt."
         if NewParameters = '' then
             exit(false);
         SetParameters(Config, NewParameters);
+        // The gallery shows this document with the same data.
+        SetReportData(Config."Target Report ID", NewParameters);
         exit(true);
     end;
 
     procedure ClearData(var Config: Record "Report Style Config")
+    var
+        PreviewData: Record "Report Style Preview Data";
     begin
         Clear(Config."Report Parameters");
         Config.Modify();
+        if PreviewData.Get(Config."Target Report ID") then
+            PreviewData.Delete();
+    end;
+
+    /// "Your documents" gallery: the draft (theme and header/footer as they are now) aimed at another document.
+    /// It is a temporary copy, so the selected document and the saved draft are not touched.
+    procedure GalleryConfig(Config: Record "Report Style Config"; ReportID: Integer; LayoutName: Text; LayoutAppID: Text; var GalleryRec: Record "Report Style Config" temporary)
+    begin
+        GalleryRec.Reset();
+        GalleryRec.DeleteAll();
+        GalleryRec := Config;
+        GalleryRec."Target Report ID" := ReportID;
+        GalleryRec."Target Layout Name" := CopyStr(LayoutName, 1, MaxStrLen(GalleryRec."Target Layout Name"));
+        if not Evaluate(GalleryRec."Target Layout App ID", LayoutAppID) then
+            Clear(GalleryRec."Target Layout App ID");
+        Clear(GalleryRec."Report Parameters");
+        if ReportID = Config."Target Report ID" then
+            SetParametersOnly(GalleryRec, GetParameters(Config))
+        else
+            SetParametersOnly(GalleryRec, GetReportData(ReportID));
+        GalleryRec.Insert();
+    end;
+
+    /// Lets the user choose the preview data of a gallery document (its request page).
+    procedure ChooseGalleryData(ReportID: Integer): Boolean
+    var
+        NewParameters: Text;
+    begin
+        NewParameters := Report.RunRequestPage(ReportID, GetReportData(ReportID));
+        if NewParameters = '' then
+            exit(false);
+        SetReportData(ReportID, NewParameters);
+        exit(true);
+    end;
+
+    local procedure GetReportData(ReportID: Integer) Parameters: Text
+    var
+        PreviewData: Record "Report Style Preview Data";
+        ParamInStream: InStream;
+    begin
+        if not PreviewData.Get(ReportID) then
+            exit('');
+        PreviewData.CalcFields(Parameters);
+        if not PreviewData.Parameters.HasValue() then
+            exit('');
+        PreviewData.Parameters.CreateInStream(ParamInStream, TextEncoding::UTF8);
+        ParamInStream.Read(Parameters);
+    end;
+
+    local procedure SetReportData(ReportID: Integer; Parameters: Text)
+    var
+        PreviewData: Record "Report Style Preview Data";
+        ParamOutStream: OutStream;
+    begin
+        if not PreviewData.Get(ReportID) then begin
+            PreviewData.Init();
+            PreviewData."Report ID" := ReportID;
+            PreviewData.Insert();
+        end;
+        PreviewData.Parameters.CreateOutStream(ParamOutStream, TextEncoding::UTF8);
+        ParamOutStream.Write(Parameters);
+        PreviewData.Modify();
+    end;
+
+    local procedure SetParametersOnly(var Rec: Record "Report Style Config"; Parameters: Text)
+    var
+        ParamOutStream: OutStream;
+    begin
+        if Parameters = '' then
+            exit;
+        Rec."Report Parameters".CreateOutStream(ParamOutStream, TextEncoding::UTF8);
+        ParamOutStream.Write(Parameters);
     end;
 
     local procedure StateFromConfig(var Config: Record "Report Style Config") State: JsonObject

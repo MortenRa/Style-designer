@@ -182,3 +182,43 @@
 .rss-dot.pick:hover { color: var(--accent); border-color: var(--accent); }
 .rss-dot.pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: 0; padding: 0; }
 .rss-dot.pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* "This document" / "Your documents" switch in the preview bar */
+.rss-view { display: inline-flex; border: 1px solid #c8c6c4; border-radius: 6px; overflow: hidden; margin-left: auto; margin-right: 12px; }
+.rss-view button { font: inherit; font-size: 12.5px; padding: 5px 12px; border: 0; background: #fff; color: #323130; cursor: pointer; }
+.rss-view button + button { border-left: 1px solid #c8c6c4; }
+.rss-view button.on { background: var(--accent); color: #fff; }
+.rss-view button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* "Your documents" gallery */
+.rss-gallery { position: absolute; inset: 0; overflow-y: auto; padding: 14px 20px 24px; }
+.rss-gal-head { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 12px; font-size: 12.5px; color: var(--muted); }
+.rss-gal-head #rss-gal-status { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.rss-gal-note { text-align: right; }
+.rss-gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.rss-gal-card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.05); }
+.rss-gal-top { display: flex; align-items: flex-start; gap: 6px; }
+.rss-gal-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.rss-gal-name b, .rss-gal-name small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rss-gal-name b { font-size: 13px; color: #242424; }
+.rss-gal-name b span { font-weight: 400; color: var(--muted); }
+.rss-gal-name small { font-size: 12px; color: var(--muted); }
+.rss-gal-x { border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0 2px; }
+.rss-gal-x:hover { color: #a4262c; }
+.rss-gal-page { border: 0; padding: 0; background: none; cursor: zoom-in; display: block; width: 100%; }
+.rss-gal-page:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rss-gal-thumb { aspect-ratio: 1 / 1.414; width: 100%; background: var(--stage); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.rss-gal-thumb canvas { display: block; }
+.rss-gal-page:hover .rss-gal-thumb { border-color: var(--accent); }
+.rss-gal-wait { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.rss-gal-wait .rss-spinner { width: 22px; height: 22px; border-width: 2px; }
+.rss-gal-err { padding: 12px; font-size: 12px; color: #a4262c; text-align: center; }
+.rss-gal-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
+.rss-gal-card.add { justify-content: center; min-height: 200px; border-style: dashed; }
+.rss-gal-addbtn { display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0; background: none; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; padding: 24px; }
+.rss-gal-addbtn span { font-size: 30px; line-height: 1; }
+.rss-gal-results { margin-top: 6px; max-height: 240px; overflow-y: auto; }
+.rss-pages[hidden], .rss-gallery[hidden] { display: none !important; }
+.rss-preview-bar { flex-wrap: wrap; row-gap: 8px; }
+.rss-view button { white-space: nowrap; }
+@media (max-width: 1100px) { .rss-badge { display: none; } .rss-title { white-space: nowrap; } }
