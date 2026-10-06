@@ -129,26 +129,48 @@ page 50102 "Report Style Designer"
                 end;
 
                 trigger CopilotRequested(State: Text; LogoColors: Text)
-                var
-                    Proposals: Record "Report Style Proposal";
-                    ReportStyleCopilot: Codeunit "Report Style Copilot";
-                    CopilotDialog: Page "Report Style Copilot";
                 begin
                     DesignerMgt.ApplyState(Config, State);
                     Commit();
-                    CopilotDialog.SetContext(DesignerMgt.GetReportCaption(Config), LogoColors);
-                    CopilotDialog.RunModal();
-                    if not CopilotDialog.GetProposals(Proposals) then
-                        exit;
-                    Suggestions := ReportStyleCopilot.ProposalsToJson(Proposals);
-                    // Only the draft changes: the first proposal goes into the preview, the others are one click away.
-                    Proposals.FindFirst();
-                    ReportStyleCopilot.ApplyProposal(Config, Proposals);
-                    CurrPage.Designer.Init(DesignerMgt.BuildStudioData(Config, Suggestions));
+                    LogoColorsJson := LogoColors;
+                    DraftTheme();
+                end;
+
+                trigger LogoColorsComputed(Colors: Text)
+                begin
+                    LogoColorsJson := Colors;
                 end;
             }
         }
     }
+
+    actions
+    {
+        // Business Central's standard place for Copilot: the "Here's what Copilot can do on this page" menu.
+        area(Prompting)
+        {
+            action(DraftThemeAction)
+            {
+                ApplicationArea = All;
+                Caption = 'Draft a theme';
+                ToolTip = 'Describe the look you want and get three themes to preview. Nothing is applied until you choose Apply.';
+                Image = Sparkle;
+                Visible = CopilotAvailable;
+
+                trigger OnAction()
+                begin
+                    DraftTheme();
+                end;
+            }
+        }
+    }
+
+    trigger OnOpenPage()
+    var
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
+    begin
+        CopilotAvailable := ReportStyleCopilot.IsAvailable();
+    end;
 
     trigger OnClosePage()
     var
@@ -162,6 +184,28 @@ page 50102 "Report Style Designer"
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
         Suggestions: Text;
         GalleryBatchID: Guid;
+        LogoColorsJson: Text;
+        CopilotAvailable: Boolean;
+
+    /// Opens the Copilot dialog for the current draft (the add-in saves it with every preview) and puts the
+    /// proposals into the designer. Started from the page's prompt action or from the button on the Theme tab.
+    local procedure DraftTheme()
+    var
+        Proposals: Record "Report Style Proposal";
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
+        CopilotDialog: Page "Report Style Copilot";
+    begin
+        DesignerMgt.GetConfig(Config);
+        CopilotDialog.SetContext(DesignerMgt.GetReportCaption(Config), LogoColorsJson);
+        CopilotDialog.RunModal();
+        if not CopilotDialog.GetProposals(Proposals) then
+            exit;
+        Suggestions := ReportStyleCopilot.ProposalsToJson(Proposals);
+        // Only the draft changes: the first proposal goes into the preview, the others are one click away.
+        Proposals.FindFirst();
+        ReportStyleCopilot.ApplyProposal(Config, Proposals);
+        CurrPage.Designer.Init(DesignerMgt.BuildStudioData(Config, Suggestions));
+    end;
 
     /// Fallback when no background session can be started: render the gallery here (with progress dialogs).
     local procedure RenderGalleryHere(DocsText: Text)

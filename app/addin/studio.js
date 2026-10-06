@@ -66,6 +66,13 @@ function Init(dataText) {
     }
     var current = findLayout(studio.state.reportId, studio.state.layoutName);
     if (current) rememberLayout(current);
+    // The page's Copilot prompt action starts outside the add-in: give it the logo colours once.
+    if (!studio.logoSent && studio.data.copilot && studio.data.copilot.enabled) {
+        studio.logoSent = true;
+        logoColors(studio.data.copilot.logo).then(function (colors) {
+            Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('LogoColorsComputed', [JSON.stringify(colors)]);
+        });
+    }
     renderPanel();
     requestPreview(0);
 }
@@ -212,8 +219,8 @@ function renderPanel() {
     // 1 · Theme
     var copilot = d.copilot || {};
     var themeBody = (copilot.enabled
-        ? '<div class="rss-copilot"><button class="rss-copilot-btn" id="rss-copilot">' + SPARKLE + 'Draft with Copilot</button>' +
-          '<span>Describe the look you want and get three themes to preview.</span></div>'
+        ? '<div class="rss-copilot"><button class="rss-copilot-btn" id="rss-copilot">' + SPARKLE + 'Draft a theme</button>' +
+          '<span>Describe the look you want and Copilot suggests three themes to preview.</span></div>'
         : '') +
         modeSwitch('theme', s.themeMode, [['keep', 'Keep current'], ['default', 'Use default'], ['custom', 'Customize']]) +
         currentLine('theme', layout);
