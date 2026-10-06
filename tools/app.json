@@ -1,0 +1,18 @@
+{
+  "id": "b65ced8f-a541-437d-91f3-9b6510dec363",
+  "name": "Report Style Designer Tools",
+  "publisher": "Abakion",
+  "version": "1.0.0.0",
+  "brief": "Local test and tooling codeunits for Report Style Designer. Not for shipping.",
+  "description": "Generator checks, preview smoke tests, option sweep, layout import and cleanup. Writes files to the server temp folder, so on-premises only.",
+  "privacyStatement": "", "EULA": "", "help": "", "url": "",
+  "platform": "29.0.0.0",
+  "dependencies": [
+    { "id": "63ca2fa4-4f03-4f2b-a480-172fef340d3f", "name": "System Application", "publisher": "Microsoft", "version": "29.0.0.0" },
+    { "id": "72885a9c-f4da-474b-be3c-32a5bb1ac05c", "name": "Report Style Designer", "publisher": "Abakion", "version": "1.0.0.0" }
+  ],
+  "idRanges": [ { "from": 50100, "to": 50149 } ],
+  "runtime": "18.0",
+  "target": "OnPrem",
+  "features": [ "NoImplicitWith" ]
+}

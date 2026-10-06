@@ -1,0 +1,18 @@
+{
+  "id": "72885a9c-f4da-474b-be3c-32a5bb1ac05c",
+  "name": "Report Style Designer",
+  "publisher": "Abakion",
+  "version": "1.0.0.14",
+  "brief": "Restyle report themes and header/footers with a live preview.",
+  "description": "Proof of concept for CP0529-270/271: generate report themes, choose header/footer designs and preview the result before applying it.",
+  "privacyStatement": "", "EULA": "", "help": "", "url": "",
+  "platform": "29.0.0.0",
+  "dependencies": [
+    { "id": "63ca2fa4-4f03-4f2b-a480-172fef340d3f", "name": "System Application", "publisher": "Microsoft", "version": "29.0.0.0" }
+  ],
+  "idRanges": [ { "from": 50100, "to": 50149 } ],
+  "internalsVisibleTo": [ { "id": "b65ced8f-a541-437d-91f3-9b6510dec363", "name": "Report Style Designer Tools", "publisher": "Abakion" } ],
+  "runtime": "17.0",
+  "target": "Cloud",
+  "features": [ "NoImplicitWith" ]
+}
