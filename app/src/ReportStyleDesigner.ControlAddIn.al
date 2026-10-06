@@ -25,7 +25,9 @@ controladdin "Report Style Designer"
     // "Browse all…" in the document picker: choose a Body layout on a full list page.
     event BrowseLayoutsRequested(State: Text);
     // "Your documents" gallery: render the current style on another Body layout, and choose that report's preview data.
-    event GalleryRequested(State: Text; ReportId: Integer; LayoutName: Text; LayoutAppId: Text; Seq: Integer);
+    // Docs: JSON array of {reportId, name, appId, seq}; rendered in a background session, picked up by GalleryPoll.
+    event GalleryBatchRequested(State: Text; Docs: Text);
+    event GalleryPoll();
     event GalleryChooseDataRequested(State: Text; ReportId: Integer);
 
     procedure Init(Data: Text);
@@ -36,4 +38,5 @@ controladdin "Report Style Designer"
     procedure ShowGalleryPage(Seq: Integer; Base64Pdf: Text);
     procedure ShowGalleryError(Seq: Integer; Message: Text);
     procedure GalleryDataChanged(ReportId: Integer);
+    procedure GalleryProgress(Pending: Integer);
 }

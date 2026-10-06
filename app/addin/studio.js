@@ -126,7 +126,6 @@ function afterResponse() {
         sendPreview();
     } else {
         hide('rss-overlay');
-        pumpGallery();
     }
 }
 
@@ -583,7 +582,8 @@ function tableThumb(styleId, c) {
 var GALLERY_MAX = 6;
 // Typical customer-facing documents, preferred when the gallery is filled for the first time.
 var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
-var gallery = { cache: {}, queue: [], inflight: null, seq: 0, timer: null, adding: false, find: '' };
+var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '' };
+var GALLERY_TIMEOUT_MS = 120000;
 
 function setView(view) {
     if (studio.view === view || !studio.data) return;
@@ -598,7 +598,7 @@ function setView(view) {
     byId('rss-pages').hidden = view === 'gallery';
     hide('rss-error');
     if (view === 'gallery') { hide('rss-overlay'); refreshGallery(0); }
-    else { gallery.queue = []; requestPreview(0); }
+    else { gallery.queue = []; gallery.jobs = {}; stopGalleryPoll(); requestPreview(0); }
 }
 
 function docKey(l) { return l.reportId + '|' + l.name; }
@@ -680,8 +680,47 @@ function renderGallery() {
         find.addEventListener('keydown', function (e) { if (e.key === 'Escape') { gallery.adding = false; renderGallery(); } });
         renderGalleryResults(docs);
     }
+    sendGalleryBatch();
+}
+
+// Everything that is not cached goes to one background session; finished pages are picked up by polling.
+function sendGalleryBatch() {
+    gallery.jobs = {};
+    stopGalleryPoll();
+    if (!gallery.queue.length) { updateGalleryStatus(); return; }
+    var docs = gallery.queue.map(function (item) {
+        gallery.seq += 1;
+        gallery.jobs[gallery.seq] = item;
+        var box = byId('rss-gal-' + item.index);
+        if (box) box.innerHTML = '<div class="rss-gal-wait"><div class="rss-spinner"></div>Rendering…</div>';
+        return { reportId: item.doc.reportId, name: item.doc.name, appId: item.doc.appId || '', seq: gallery.seq };
+    });
+    gallery.queue = [];
+    gallery.started = Date.now();
     updateGalleryStatus();
-    pumpGallery();
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('GalleryBatchRequested', [JSON.stringify(studio.state), JSON.stringify(docs)]);
+}
+
+// AL -> JS: how many pages of the batch are still being rendered.
+function GalleryProgress(pending) {
+    stopGalleryPoll();
+    updateGalleryStatus();
+    if (studio.view !== 'gallery' || pending <= 0 || !Object.keys(gallery.jobs).length) return;
+    if (Date.now() - gallery.started > GALLERY_TIMEOUT_MS) {
+        Object.keys(gallery.jobs).forEach(function (seq) { showGalleryResult(gallery.jobs[seq].index, { error: 'This page took too long. Switch views to try again.' }); });
+        gallery.jobs = {};
+        updateGalleryStatus();
+        return;
+    }
+    gallery.poll = setTimeout(function () {
+        gallery.poll = null;
+        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('GalleryPoll', []);
+    }, 1000);
+}
+
+function stopGalleryPoll() {
+    if (gallery.poll) clearTimeout(gallery.poll);
+    gallery.poll = null;
 }
 
 function renderGalleryResults(docs) {
@@ -705,32 +744,18 @@ function renderGalleryResults(docs) {
     });
 }
 
-function pumpGallery() {
-    if (gallery.inflight || studio.busy || studio.view !== 'gallery') return;
-    var next = gallery.queue.shift();
-    if (!next) { updateGalleryStatus(); return; }
-    gallery.seq += 1;
-    gallery.inflight = { seq: gallery.seq, index: next.index, key: next.key };
-    var box = byId('rss-gal-' + next.index);
-    if (box) box.innerHTML = '<div class="rss-gal-wait"><div class="rss-spinner"></div>Rendering…</div>';
-    updateGalleryStatus();
-    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('GalleryRequested',
-        [JSON.stringify(studio.state), next.doc.reportId, next.doc.name, next.doc.appId || '', gallery.seq]);
-}
-
 function ShowGalleryPage(seq, base64Pdf) { galleryResponse(seq, { pdf: base64Pdf }); }
 function ShowGalleryError(seq, message) { galleryResponse(seq, { error: message }); }
 
 function galleryResponse(seq, result) {
-    var job = gallery.inflight;
-    gallery.inflight = null;
-    if (job && job.seq === seq) {
-        gallery.cache[job.key] = result;
-        // Only draw when the card still shows that document in that style.
-        var card = byId('rss-gal-' + job.index);
-        if (card && job.key === card.closest('[data-doc]').getAttribute('data-doc') + '|' + styleKey()) showGalleryResult(job.index, result);
-    }
-    pumpGallery();
+    var job = gallery.jobs[seq];
+    if (!job) return;   // from a batch that was replaced
+    delete gallery.jobs[seq];
+    gallery.cache[job.key] = result;
+    // Only draw when the card still shows that document in that style.
+    var card = byId('rss-gal-' + job.index);
+    if (card && job.key === card.closest('[data-doc]').getAttribute('data-doc') + '|' + styleKey()) showGalleryResult(job.index, result);
+    updateGalleryStatus();
 }
 
 function GalleryDataChanged(reportId) {
@@ -774,7 +799,7 @@ function showGalleryResult(index, result) {
 function updateGalleryStatus() {
     var el = byId('rss-gal-status');
     if (!el) return;
-    var left = gallery.queue.length + (gallery.inflight ? 1 : 0);
+    var left = Object.keys(gallery.jobs).length;
     el.textContent = left ? 'Rendering… ' + left + ' to go' : '';
 }
 

@@ -12,6 +12,9 @@ permissionset 50100 "REPORT STYLE DESIGN"
     Permissions =
         tabledata "Report Style Config" = RIMD,
         tabledata "Report Style Preview Data" = RIMD,
+        tabledata "Report Style Gallery Job" = RIMD,
+        table "Report Style Gallery Job" = X,
+        codeunit "Report Style Gallery Jobs" = X,
         table "Report Style Preview Data" = X,
         tabledata "Tenant Report Layout" = RIMD,
         tabledata "Tenant Report Layout Cfg" = RIMD,

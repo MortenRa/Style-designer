@@ -72,22 +72,40 @@ page 50102 "Report Style Designer"
                     CurrPage.Designer.SetHasData(false);
                 end;
 
-                trigger GalleryRequested(State: Text; ReportId: Integer; LayoutName: Text; LayoutAppId: Text; Seq: Integer)
+                trigger GalleryBatchRequested(State: Text; Docs: Text)
                 var
-                    GalleryRec: Record "Report Style Config" temporary;
-                    Runner: Codeunit "Report Style Designer Runner";
-                    Pdf: Codeunit "Temp Blob";
-                    Base64Convert: Codeunit "Base64 Convert";
+                    GalleryJobs: Codeunit "Report Style Gallery Jobs";
                 begin
-                    // Same per-user preview as the main one, on a temporary copy aimed at the gallery document.
                     DesignerMgt.ApplyState(Config, State);
                     Commit();
-                    DesignerMgt.GalleryConfig(Config, ReportId, LayoutName, LayoutAppId, GalleryRec);
-                    if Runner.Preview(GalleryRec) then begin
-                        Runner.GetPdf(Pdf);
-                        CurrPage.Designer.ShowGalleryPage(Seq, Base64Convert.ToBase64(Pdf.CreateInStream()));
-                    end else
-                        CurrPage.Designer.ShowGalleryError(Seq, Runner.GetErrorText());
+                    if GalleryJobs.StartBatch(State, Docs, GalleryBatchID) then
+                        CurrPage.Designer.GalleryProgress(1)   // the add-in starts polling
+                    else
+                        RenderGalleryHere(Docs);
+                end;
+
+                trigger GalleryPoll()
+                var
+                    Job: Record "Report Style Gallery Job";
+                    Base64Convert: Codeunit "Base64 Convert";
+                    PdfInStream: InStream;
+                begin
+                    Job.SetCurrentKey("User Security ID", "Batch ID");
+                    Job.SetRange("User Security ID", UserSecurityId());
+                    Job.SetRange("Batch ID", GalleryBatchID);
+                    Job.SetFilter(Status, '%1|%2', Job.Status::Done, Job.Status::Failed);
+                    if Job.FindSet() then
+                        repeat
+                            if Job.Status = Job.Status::Done then begin
+                                Job.CalcFields(Pdf);
+                                Job.Pdf.CreateInStream(PdfInStream);
+                                CurrPage.Designer.ShowGalleryPage(Job.Seq, Base64Convert.ToBase64(PdfInStream));
+                            end else
+                                CurrPage.Designer.ShowGalleryError(Job.Seq, Job."Error Text");
+                        until Job.Next() = 0;
+                    Job.DeleteAll();
+                    Job.SetRange(Status);
+                    CurrPage.Designer.GalleryProgress(Job.Count());
                 end;
 
                 trigger GalleryChooseDataRequested(State: Text; ReportId: Integer)
@@ -132,8 +150,53 @@ page 50102 "Report Style Designer"
         }
     }
 
+    trigger OnClosePage()
+    var
+        GalleryJobs: Codeunit "Report Style Gallery Jobs";
+    begin
+        GalleryJobs.CancelBatches();
+    end;
+
     var
         Config: Record "Report Style Config";
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
         Suggestions: Text;
+        GalleryBatchID: Guid;
+
+    /// Fallback when no background session can be started: render the gallery here (with progress dialogs).
+    local procedure RenderGalleryHere(DocsText: Text)
+    var
+        GalleryRec: Record "Report Style Config" temporary;
+        Runner: Codeunit "Report Style Designer Runner";
+        Pdf: Codeunit "Temp Blob";
+        Base64Convert: Codeunit "Base64 Convert";
+        Docs: JsonArray;
+        Doc: JsonToken;
+        Value: JsonToken;
+        ReportId: Integer;
+        Seq: Integer;
+        LayoutName: Text;
+        LayoutAppId: Text;
+    begin
+        if Docs.ReadFrom(DocsText) then
+            foreach Doc in Docs do begin
+                Doc.AsObject().Get('reportId', Value);
+                ReportId := Value.AsValue().AsInteger();
+                Doc.AsObject().Get('seq', Value);
+                Seq := Value.AsValue().AsInteger();
+                Doc.AsObject().Get('name', Value);
+                LayoutName := Value.AsValue().AsText();
+                LayoutAppId := '';
+                if Doc.AsObject().Get('appId', Value) then
+                    if not Value.AsValue().IsNull() then
+                        LayoutAppId := Value.AsValue().AsText();
+                DesignerMgt.GalleryConfig(Config, ReportId, LayoutName, LayoutAppId, GalleryRec);
+                if Runner.Preview(GalleryRec) then begin
+                    Runner.GetPdf(Pdf);
+                    CurrPage.Designer.ShowGalleryPage(Seq, Base64Convert.ToBase64(Pdf.CreateInStream()));
+                end else
+                    CurrPage.Designer.ShowGalleryError(Seq, Runner.GetErrorText());
+            end;
+        CurrPage.Designer.GalleryProgress(0);
+    end;
 }
