@@ -123,13 +123,6 @@
 .rss-apply-actions .rss-primary { width: auto; margin: 0; min-width: 120px; }
 .rss-apply-actions .rss-secondary { flex: 0 0 auto; }
 
-/* Copilot entry point on the Theme tab */
-.rss-copilot { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; padding: 10px 12px; border-radius: 8px; background: linear-gradient(135deg, #f3f0fb, #eaf3fb); border: 1px solid #ddd5f3; }
-.rss-copilot span { font-size: 12px; color: var(--muted); line-height: 1.35; }
-.rss-copilot-btn { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; font: inherit; font-size: 13px; font-weight: 600; color: #fff; background: linear-gradient(135deg, #6a4ccf, #0f6cbd); border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; }
-.rss-copilot-btn:hover { filter: brightness(1.08); }
-.rss-copilot-btn:disabled { opacity: .6; cursor: progress; }
-.rss-copilot-btn:focus-visible { outline: 2px solid #6a4ccf; outline-offset: 2px; }
 .rss-sparkle { width: 15px; height: 15px; fill: currentColor; }
 .rss-section-title .rss-sparkle { width: 12px; height: 12px; fill: #6a4ccf; vertical-align: -1px; }
 .rss-why { font-size: 12px; line-height: 1.4; margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: #f6f4fc; color: var(--text); }
@@ -248,11 +241,5 @@
 .rss-card:hover, .rss-font:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); transform: none; border-color: var(--control); }
 .rss-gal-head #rss-gal-status { color: var(--link); }
 
-/* Copilot entry: a normal Business Central button with the Copilot sparkle, not a coloured banner */
-.rss-copilot { background: #fff; border: 1px solid var(--line); border-radius: 2px; }
-.rss-copilot-btn { color: var(--text); background: #fff; border: 1px solid var(--control); border-radius: 2px;
     font-family: "Segoe UI Semibold", "Segoe WP Semibold", device-segoe-semibold, "Segoe UI", "Segoe WP", Segoe, Tahoma, Helvetica, Arial, sans-serif; font-weight: 400; }
-.rss-copilot-btn:hover { background: #f3f2f1; filter: none; }
-.rss-copilot-btn .rss-sparkle { fill: #7a4ec2; }
-.rss-copilot-btn:focus-visible { outline: 2px solid var(--accent); }
 .rss-why { background: #f8f8f8; }

@@ -20,9 +20,8 @@ controladdin "Report Style Designer"
     event SaveRequested(State: Text; Mode: Text);
     event ChooseDataRequested(State: Text);
     event ClearDataRequested(State: Text);
-    // LogoColors: JSON array of hex colours the add-in read from the company logo.
-    event CopilotRequested(State: Text; LogoColors: Text);
-    // Sent once after loading, so the page's prompt action can pass the logo colours to Copilot too.
+    // Sent once after loading: the main colours read from the company logo (JSON array of hex), for the page's
+    // Copilot prompt action. Only these colours go to Copilot, never the picture.
     event LogoColorsComputed(Colors: Text);
     // "Browse all…" in the document picker: choose a Body layout on a full list page.
     event BrowseLayoutsRequested(State: Text);

@@ -128,14 +128,6 @@ page 50102 "Report Style Designer"
                     CurrPage.Designer.Init(DesignerMgt.BuildStudioData(Config, Suggestions));
                 end;
 
-                trigger CopilotRequested(State: Text; LogoColors: Text)
-                begin
-                    DesignerMgt.ApplyState(Config, State);
-                    Commit();
-                    LogoColorsJson := LogoColors;
-                    DraftTheme();
-                end;
-
                 trigger LogoColorsComputed(Colors: Text)
                 begin
                     LogoColorsJson := Colors;
@@ -188,7 +180,7 @@ page 50102 "Report Style Designer"
         CopilotAvailable: Boolean;
 
     /// Opens the Copilot dialog for the current draft (the add-in saves it with every preview) and puts the
-    /// proposals into the designer. Started from the page's prompt action or from the button on the Theme tab.
+    /// proposals into the designer. Started from the page's prompt action.
     local procedure DraftTheme()
     var
         Proposals: Record "Report Style Proposal";
