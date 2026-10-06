@@ -223,11 +223,7 @@ codeunit 50119 "Report Style Copilot"
         AzureOpenAI.SetCopilotCapability(Enum::"Copilot Capability"::"Report Style Suggestions");
         Params.SetTemperature(0.7);
         Params.SetMaxTokens(2500);
-
-        Messages.SetPrimarySystemMessage(GetSystemMessage());
-        Messages.AddUserMessage(UserMessage);
-        Messages.AddTool(ProposeThemes);
-        Messages.SetFunctionAsToolChoice(ProposeThemes);
+        BuildMessages(UserMessage, Messages);
 
         AzureOpenAI.GenerateChatCompletion(Messages, Params, Response);
         if not Response.IsSuccess() then
@@ -236,6 +232,17 @@ codeunit 50119 "Report Style Copilot"
             Error(NoProposalsErr);
         FunctionResponse := FunctionResponses.Get(1);
         exit(FunctionResponse.GetArguments());
+    end;
+
+    /// Everything the AI call sends except the request itself; separate so the local checks can run it.
+    procedure BuildMessages(UserMessage: Text; var Messages: Codeunit "AOAI Chat Messages")
+    var
+        ProposeThemes: Codeunit "Report Style Propose Themes";
+    begin
+        Messages.SetPrimarySystemMessage(GetSystemMessage());
+        Messages.AddUserMessage(UserMessage);
+        Messages.AddTool(ProposeThemes);
+        Messages.SetFunctionAsToolChoice(ProposeThemes);
     end;
 
     [NonDebuggable]

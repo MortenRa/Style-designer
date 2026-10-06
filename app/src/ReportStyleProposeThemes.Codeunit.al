@@ -66,23 +66,30 @@ codeunit 50120 "Report Style Propose Themes" implements "AOAI Function"
     end;
 
     /// Names Copilot may use for each option, without the "keep the base theme" values.
-    procedure FontPairChoices() Choices: List of [Text]
+    procedure FontPairChoices(): List of [Text]
     begin
-        Choices := Enum::"Report Style Font Pair".Names();
-        Choices.Remove('KeepBase');
+        exit(Without(Enum::"Report Style Font Pair".Names(), 'KeepBase', ''));
     end;
 
-    procedure TableStyleChoices() Choices: List of [Text]
+    procedure TableStyleChoices(): List of [Text]
     begin
-        Choices := Enum::"Report Theme Table Style".Names();
-        Choices.Remove('KeepBase');
+        exit(Without(Enum::"Report Theme Table Style".Names(), 'KeepBase', ''));
     end;
 
-    procedure PageColorChoices() Choices: List of [Text]
+    procedure PageColorChoices(): List of [Text]
     begin
-        Choices := Enum::"Report Style Page Color".Names();
-        Choices.Remove('KeepBase');
-        Choices.Remove('Custom');   // tinted pages are computed, not guessed
+        // tinted pages are computed, not guessed
+        exit(Without(Enum::"Report Style Page Color".Names(), 'KeepBase', 'Custom'));
+    end;
+
+    /// Enum.Names() is read-only, so the choices are copied into a new list.
+    local procedure Without(Names: List of [Text]; Skip1: Text; Skip2: Text) Choices: List of [Text]
+    var
+        Name: Text;
+    begin
+        foreach Name in Names do
+            if (Name <> Skip1) and (Name <> Skip2) then
+                Choices.Add(Name);
     end;
 
     local procedure AddString(var Properties: JsonObject; Name: Text; Description: Text)

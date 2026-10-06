@@ -1,5 +1,6 @@
 namespace Abakion.ReportStyleDesigner;
 
+using System.AI;
 using System.IO;
 using System.Utilities;
 
@@ -14,6 +15,7 @@ codeunit 50124 "Copilot Theme Checks"
 
     trigger OnRun()
     begin
+        ToolDefinition();
         HexRules();
         ColourNames();
         Contrast();
@@ -36,6 +38,31 @@ codeunit 50124 "Copilot Theme Checks"
         Check(not Rules.TryNormalizeHex('12345G', Hex), 'G is not hex');
         Check(not Rules.TryNormalizeHex('blue', Hex), 'colour names are rejected');
         Check(not Rules.TryNormalizeHex('"/><x', Hex), 'markup is rejected');
+    end;
+
+    // The real call builds the tool definition first; the local stand-in skips that call, so test it here.
+    local procedure ToolDefinition()
+    var
+        ProposeThemes: Codeunit "Report Style Propose Themes";
+        Prompt: JsonObject;
+        Text: Text;
+    begin
+        Prompt := ProposeThemes.GetPrompt();
+        Prompt.WriteTo(Text);
+        Check(Text.Contains('"name":"propose_themes"'), 'tool definition has the function name');
+        Check(Text.Contains('"Sitka"') and not Text.Contains('"KeepBase"'), 'font choices without KeepBase');
+        Check(Text.Contains('"WarmPaper"') and not Text.Contains('"Custom"'), 'page colours without KeepBase and Custom');
+        Check(ProposeThemes.TableStyleChoices().Count() = 4, 'four table styles');
+        BuildsTheRequest();
+    end;
+
+    // Runs the real request building (system message, user message, tool, tool choice) without calling the service.
+    local procedure BuildsTheRequest()
+    var
+        Messages: Codeunit "AOAI Chat Messages";
+    begin
+        ReportStyleCopilot.BuildMessages('Calm and modern in pink', Messages);
+        Check(Messages.ToolsExists(), 'the request carries the propose_themes tool');
     end;
 
     local procedure ColourNames()
