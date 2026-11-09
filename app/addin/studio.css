@@ -357,3 +357,5 @@
 .rss-cmp-stage { display: flex; align-items: flex-start; gap: 6px; }
 .rss-cmp-stage .rss-cmp-large { flex: 1 1 auto; min-width: 0; }
 .rss-cmp-stage .rss-car-nav { margin-top: 40%; }
+
+.rss-cmp-col { min-width: 0; display: flex; flex-direction: column; gap: 6px; }

@@ -896,17 +896,17 @@ function renderComparison(docs) {
             '<button class="rss-car-nav" data-cmp-step="' + key + '" data-delta="1" aria-label="Next theme">›</button></div>' +
             '<b>' + esc(g.name) + '</b><small>' + esc(g.reason) + '</small></div>';
     };
+    // Document choice on top; left and right each have their own theme choice above their preview.
+    var docChips = docs.map(function (l, i) {
+        return '<button class="rss-chip' + (i === cmp.doc ? ' on' : '') + '" data-cmp-doc="' + i + '">' + esc(l.reportName) + '</button>';
+    }).join('');
     var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
         '<span class="rss-gal-note"><button class="rss-link" data-cmp-exit>Back to my documents</button></span></div>' +
-        '<div class="rss-cmp-pick"><div><span>Left</span>' + chips('data-cmp-a', cmp.a) + '</div>' +
-        '<div><span>Right</span>' + chips('data-cmp-b', cmp.b) + '</div></div>' +
-        '<div class="rss-cmp-big">' + side('big-a', list[cmp.a]) + side('big-b', list[cmp.b]) + '</div>' +
-        '<div class="rss-cmp-docs-head">Show on another document</div>' +
-        '<div class="rss-cmp-docs">' + docs.map(function (l, i) {
-            return '<button class="rss-cmp-doc' + (i === cmp.doc ? ' on' : '') + '" data-cmp-doc="' + i + '">' +
-                '<div class="rss-gal-thumb" id="rss-gal-g-' + i + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>' +
-                '<span>' + esc(l.reportName) + '</span></button>';
-        }).join('') + '</div>';
+        '<div class="rss-cmp-pick"><div><span>Document</span>' + docChips + '</div></div>' +
+        '<div class="rss-cmp-big">' +
+            '<div class="rss-cmp-col"><div class="rss-cmp-pick"><div><span>Left</span>' + chips('data-cmp-a', cmp.a) + '</div></div>' + side('big-a', list[cmp.a]) + '</div>' +
+            '<div class="rss-cmp-col"><div class="rss-cmp-pick"><div><span>Right</span>' + chips('data-cmp-b', cmp.b) + '</div></div>' + side('big-b', list[cmp.b]) + '</div>' +
+        '</div>';
     host.innerHTML = html;
 
     host.querySelector('[data-cmp-exit]').addEventListener('click', function () { gallery.compare = null; gallery.cmp = null; renderGallery(); });
@@ -922,7 +922,6 @@ function renderComparison(docs) {
     });
 
     cells.push({ index: 'big-a', doc: doc, style: styleA }, { index: 'big-b', doc: doc, style: styleB });
-    docs.forEach(function (l, i) { cells.push({ index: 'g-' + i, doc: l, style: styleA }); });
     gallery.expected = {};
     cells.forEach(function (c) {
         var key = docKey(c.doc) + '|' + c.style;
