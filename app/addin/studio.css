@@ -364,3 +364,9 @@
 .rss-cmp-large { cursor: zoom-in; }
 .rss-cmp-large.rss-zoomed { position: fixed; inset: 3vh 3vw; z-index: 60; height: auto; min-height: 0; aspect-ratio: auto; overflow: auto; align-items: flex-start; background: #fff; border: 1px solid var(--control); box-shadow: 0 8px 32px rgba(0,0,0,.25); cursor: zoom-out; }
 .rss-cmp-large.rss-zoomed canvas { width: 100%; height: auto; }
+
+/* Side panel: the Copilot suggestions are a plain list, not a carousel. */
+.rss-copilot .rss-car { display: block; }
+.rss-copilot .rss-car-nav, .rss-copilot .rss-car-dots { display: none; }
+.rss-copilot .rss-carousel { flex-direction: column; overflow: visible; scroll-snap-type: none; gap: 8px; }
+.rss-copilot .rss-carousel > * { flex: 0 0 auto; width: 100%; }
