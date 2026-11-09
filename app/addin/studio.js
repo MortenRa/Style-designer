@@ -604,7 +604,7 @@ var GALLERY_MAX = 6;          // own selection
 var GALLERY_GROUP_MAX = 12;   // a document group
 // Typical customer-facing documents, preferred when the gallery is filled for the first time.
 var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
-var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '', compare: null, cmp: null };
+var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '', compare: null, cmp: null, expected: {} };
 var COMPARE_MAX_DOCS = 4;     // a comparison renders every suggestion on every document, so keep the grid small
 var GALLERY_TIMEOUT_MS = 120000;
 
@@ -797,8 +797,10 @@ function renderComparison(docs) {
 
     cells.push({ index: 'big-a', doc: doc, style: styleA }, { index: 'big-b', doc: doc, style: styleB });
     docs.forEach(function (l, i) { cells.push({ index: 'g-' + i, doc: l, style: styleA }); });
+    gallery.expected = {};
     cells.forEach(function (c) {
         var key = docKey(c.doc) + '|' + c.style;
+        gallery.expected[c.index] = key;
         var hit = gallery.cache[key];
         if (hit) showGalleryResult(c.index, hit); else gallery.queue.push({ index: c.index, doc: c.doc, key: key, state: c.style });
     });
@@ -885,8 +887,11 @@ function galleryResponse(seq, result) {
     delete gallery.jobs[seq];
     gallery.cache[job.key] = result;
     // Only draw when the card still shows that document in that style.
-    var card = byId('rss-gal-' + job.index);
-    if (card && job.key === card.closest('[data-doc]').getAttribute('data-doc') + '|' + styleKey()) showGalleryResult(job.index, result);
+    // A comparison cell expects the key it was given; a gallery card expects its document in the current style.
+    var card = byId('rss-gal-' + job.index), doc = card ? card.closest('[data-doc]') : null, wanted;
+    if (job.state) wanted = gallery.expected[job.index];
+    else if (doc) wanted = doc.getAttribute('data-doc') + '|' + styleKey();
+    if (card && wanted === job.key) showGalleryResult(job.index, result);
     updateGalleryStatus();
 }
 
