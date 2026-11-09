@@ -334,3 +334,12 @@
 .d-full .rss-fold.collapsed .rss-chevron { transform: none; }
 .d-simple .rss-sub:has(> .rss-fold-head[data-fold="Start from"]),
 .d-simple .rss-sub:has(> .rss-fold-head[data-fold="Page colour"]) { display: none; }
+
+/* Split view: theme in the left column, header/footer and Apply in the right column, preview in the middle. */
+.rss.v11 { display: grid; grid-template-columns: 330px minmax(0, 1fr) 330px; }
+.rss.v11 .rss-panel { display: contents; }
+.rss.v11 .rss-col { grid-row: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; background: var(--panel); overflow: hidden; }
+.rss.v11 .rss-col-theme { grid-column: 1; border-right: 1px solid var(--line); }
+.rss.v11 .rss-col-header { grid-column: 3; border-left: 1px solid var(--line); }
+.rss.v11 .rss-preview { grid-column: 2; grid-row: 1; }
+.rss.v11 .rss-col .rss-scroll, .rss.v11 .rss-col .rss-scroll-h { flex: 1 1 auto; overflow-y: auto; padding: 8px 18px 24px; }

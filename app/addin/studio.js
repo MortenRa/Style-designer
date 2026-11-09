@@ -22,10 +22,8 @@ var DESIGN_VIEWS = [
     { name: 'Full: preview right', cls: 'v4', copilot: 'inline', density: 'full' },
     { name: 'Full: preview left (standard)', cls: 'v5', copilot: 'inline', density: 'full' },
     { name: 'Copilot first: suggestions on the left', cls: 'v6', copilot: 'aside', density: 'simple' },
-    { name: 'Guided steps: wide preview below', cls: 'v7', copilot: 'inline', density: 'simple' },
-    { name: 'Compare: suggestions side by side', cls: 'v8', copilot: 'inline', density: 'full', compare: true },
-    { name: 'Your documents: grid', cls: 'v9', copilot: 'inline', density: 'full', gallery: true },
-    { name: 'Full: centre, Copilot on the side', cls: 'v10', copilot: 'aside', density: 'full' }
+    { name: 'Full: centre, Copilot on the side', cls: 'v10', copilot: 'aside', density: 'full' },
+    { name: 'Split: theme left, header/footer right', cls: 'v11', copilot: 'inline', density: 'full', split: true }
 ];
 var DEFAULT_DESIGN = 4;
 
@@ -393,7 +391,13 @@ function renderPanel() {
     var previous = byId('rss-scroll');
     var scrollTop = previous && !studio.tabChanged ? previous.scrollTop : 0;
     studio.tabChanged = false;
-    panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + html + '</div>' + applyBar;
+    if (currentDesignView().split) {
+        // Theme on the left, header/footer and Apply on the right, preview in the middle.
+        panel.innerHTML = '<div class="rss-col rss-col-theme"><div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + themeBody + '</div></div>' +
+            '<div class="rss-col rss-col-header"><div class="rss-scroll rss-scroll-h">' + headerBody + '</div>' + applyBar + '</div>';
+    } else {
+        panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + html + '</div>' + applyBar;
+    }
     byId('rss-scroll').scrollTop = scrollTop;
     // The suggestions in the side panel (views where Copilot sits beside the preview).
     var aside = byId('rss-copilot');
