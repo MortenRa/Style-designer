@@ -33,6 +33,7 @@ codeunit 50127 "Report Style Gallery Jobs"
         StateOutStream: OutStream;
         SessionID: Integer;
         FirstEntryNo: Integer;
+        StateToken: JsonToken;
     begin
         CancelBatches();
         BatchID := CreateGuid();
@@ -50,7 +51,11 @@ codeunit 50127 "Report Style Gallery Jobs"
             Job.Status := Job.Status::Pending;
             Job.Created := CurrentDateTime();
             Job.State.CreateOutStream(StateOutStream, TextEncoding::UTF8);
-            StateOutStream.Write(StateText);
+            // A document may carry its own style (used to compare proposals); otherwise the batch style applies.
+            if Doc.AsObject().Get('state', StateToken) and StateToken.IsValue() then
+                StateOutStream.Write(StateToken.AsValue().AsText())
+            else
+                StateOutStream.Write(StateText);
             Job.Insert();
             if FirstEntryNo = 0 then
                 FirstEntryNo := Job."Entry No.";
