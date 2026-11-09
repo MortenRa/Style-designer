@@ -18,14 +18,13 @@ var studio = {
 var DESIGN_VIEWS = [
     { name: 'Simple: preview right', cls: 'v1', copilot: 'inline', density: 'simple' },
     { name: 'Simple: preview centre, Copilot on the side', cls: 'v2', copilot: 'aside', density: 'simple' },
-    { name: 'Simple: preview on top', cls: 'v3', copilot: 'inline', density: 'simple' },
     { name: 'Full: preview right', cls: 'v4', copilot: 'inline', density: 'full' },
     { name: 'Full: preview left (standard)', cls: 'v5', copilot: 'inline', density: 'full' },
     { name: 'Copilot first: suggestions on the left', cls: 'v6', copilot: 'aside', density: 'simple' },
     { name: 'Full: centre, Copilot on the side', cls: 'v10', copilot: 'aside', density: 'full' },
     { name: 'Split: theme left, header/footer right', cls: 'v11', copilot: 'inline', density: 'full', split: true }
 ];
-var DEFAULT_DESIGN = 4;
+var DEFAULT_DESIGN = 3;   // index of "Full: preview left (standard)"
 
 function currentDesignView() { return DESIGN_VIEWS[studio.design === undefined ? DEFAULT_DESIGN : studio.design]; }
 
