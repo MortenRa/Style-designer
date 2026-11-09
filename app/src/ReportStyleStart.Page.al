@@ -145,14 +145,21 @@ page 50105 "Report Style Start"
     // A Card page fills its non-source fields here, not in OnAfterGetCurrRecord (that is for list pages).
     trigger OnAfterGetRecord()
     begin
-        RefreshAdvice();
+        ComputeAdvice();
     end;
 
-    local procedure RefreshAdvice()
+    local procedure ComputeAdvice()
     var
         Advice: Codeunit "Report Style Advice";
     begin
         AdviceText := Advice.GetAdviceText(Rec);
+    end;
+
+    // After a change the page must be redrawn, or a non-source field keeps its old text.
+    local procedure RefreshAdvice()
+    begin
+        ComputeAdvice();
+        CurrPage.Update(false);
     end;
 
     local procedure ApplyComposition()
