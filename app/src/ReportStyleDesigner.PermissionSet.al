@@ -13,6 +13,8 @@ permissionset 50100 "REPORT STYLE DESIGN"
         tabledata "Report Style Config" = RIMD,
         tabledata "Report Style Preview Data" = RIMD,
         tabledata "Report Style Gallery Job" = RIMD,
+        tabledata "Report Style Suggestion" = RIMD,
+        table "Report Style Suggestion" = X,
         table "Report Style Gallery Job" = X,
         codeunit "Report Style Gallery Jobs" = X,
         table "Report Style Preview Data" = X,

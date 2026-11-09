@@ -20,24 +20,30 @@ codeunit 50104 "Report Style Designer Mgt."
     /// Keeps the last Copilot proposals on the stored configuration. Only the suggestions are written, not the draft.
     procedure SaveSuggestions(SuggestionsJson: Text)
     var
-        StoredConfig: Record "Report Style Config";
+        Store: Record "Report Style Suggestion";
         OutStream: OutStream;
     begin
-        GetConfig(StoredConfig);
-        StoredConfig."Copilot Suggestions".CreateOutStream(OutStream, TextEncoding::UTF8);
+        if not Store.Get('') then begin
+            Store.Init();
+            Store.Insert();
+        end;
+        Store.Suggestions.CreateOutStream(OutStream, TextEncoding::UTF8);
         OutStream.WriteText(SuggestionsJson);
-        StoredConfig.Modify();
+        Store.Modify();
     end;
 
-    local procedure StoredSuggestions(var Config: Record "Report Style Config"): Text
+    local procedure StoredSuggestions(): Text
     var
+        Store: Record "Report Style Suggestion";
         InStream: InStream;
         Result: Text;
     begin
-        Config.CalcFields("Copilot Suggestions");
-        if not Config."Copilot Suggestions".HasValue() then
+        if not Store.Get('') then
             exit('');
-        Config."Copilot Suggestions".CreateInStream(InStream, TextEncoding::UTF8);
+        Store.CalcFields(Suggestions);
+        if not Store.Suggestions.HasValue() then
+            exit('');
+        Store.Suggestions.CreateInStream(InStream, TextEncoding::UTF8);
         InStream.ReadText(Result);
         exit(Result);
     end;
@@ -77,7 +83,7 @@ codeunit 50104 "Report Style Designer Mgt."
     begin
         // Without new proposals, the last ones are shown again.
         if SuggestionsJson = '' then
-            SuggestionsJson := StoredSuggestions(Config);
+            SuggestionsJson := StoredSuggestions();
         CopilotEnabled := ReportStyleCopilot.IsAvailable();
         Copilot.Add('enabled', CopilotEnabled);
         // The logo goes to the browser only, for the logo choice; it is never sent to Copilot.

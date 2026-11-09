@@ -2,7 +2,7 @@
   "id": "72885a9c-f4da-474b-be3c-32a5bb1ac05c",
   "name": "Report Style Designer",
   "publisher": "Abakion",
-  "version": "1.0.0.33",
+  "version": "1.0.0.34",
   "brief": "Restyle report themes and header/footers with a live preview.",
   "description": "Proof of concept for CP0529-270/271: generate report themes, choose header/footer designs and preview the result before applying it.",
   "privacyStatement": "", "EULA": "", "help": "", "url": "",
