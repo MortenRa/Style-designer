@@ -42,6 +42,17 @@ page 50105 "Report Style Start"
             group(Layout)
             {
                 Caption = 'Header and footer';
+                field(Composition; Composition)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Composition (draft)';
+                    ToolTip = 'Sets the logo, page number and footer in one step. The designer can change each of them.';
+
+                    trigger OnValidate()
+                    begin
+                        ApplyComposition();
+                    end;
+                }
                 field("HF Show Date"; Rec."HF Show Date")
                 {
                     ApplicationArea = All;
@@ -78,10 +89,62 @@ page 50105 "Report Style Start"
         }
     }
 
+    var
+        Composition: Enum "Report Style Composition";
+
     trigger OnOpenPage()
     var
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
     begin
         DesignerMgt.GetConfig(Rec);
+    end;
+
+    local procedure ApplyComposition()
+    begin
+        Rec."Header Mode" := 'design';
+        Rec."HF Later Pages" := 'minimal';
+        case Composition of
+            Composition::Standard:
+                begin
+                    Rec."HF Logo" := 'right';
+                    Rec."HF Page Number" := 'header';
+                    Rec."HF Footer" := 'contact';
+                    Rec."HF Show Date" := true;
+                    Rec."HF Accent Line" := false;
+                end;
+            Composition::LogoLeft:
+                begin
+                    Rec."HF Logo" := 'left';
+                    Rec."HF Page Number" := 'header';
+                    Rec."HF Footer" := 'contact';
+                    Rec."HF Show Date" := true;
+                    Rec."HF Accent Line" := true;
+                end;
+            Composition::BankFooter:
+                begin
+                    Rec."HF Logo" := 'right';
+                    Rec."HF Page Number" := 'footer';
+                    Rec."HF Footer" := 'bank';
+                    Rec."HF Show Date" := true;
+                    Rec."HF Accent Line" := false;
+                end;
+            Composition::NoDate:
+                begin
+                    Rec."HF Logo" := 'right';
+                    Rec."HF Page Number" := 'header';
+                    Rec."HF Footer" := 'contact';
+                    Rec."HF Show Date" := false;
+                    Rec."HF Accent Line" := false;
+                end;
+            Composition::Minimal:
+                begin
+                    Rec."HF Logo" := 'right';
+                    Rec."HF Page Number" := 'header';
+                    Rec."HF Footer" := 'none';
+                    Rec."HF Show Date" := true;
+                    Rec."HF Accent Line" := true;
+                end;
+        end;
+        Rec.Modify(true);
     end;
 }
