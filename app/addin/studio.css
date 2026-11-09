@@ -243,3 +243,14 @@
 
     font-family: "Segoe UI Semibold", "Segoe WP Semibold", device-segoe-semibold, "Segoe UI", "Segoe WP", Segoe, Tahoma, Helvetica, Arial, sans-serif; font-weight: 400; }
 .rss-why { background: #f8f8f8; }
+
+/* Logo position choice: a small page sheet per position, with the company logo where it would print. */
+.rss-logo-row { display: flex; gap: 8px; }
+.rss-logo-pick { flex: 1; font: inherit; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px; cursor: pointer; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.rss-logo-pick.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.rss-logo-sheet { display: flex; height: 44px; padding: 4px; background: #f4f4f4; border-radius: 4px; }
+.rss-logo-sheet img { max-height: 100%; max-width: 100%; object-fit: contain; }
+.rss-logo-left { justify-content: flex-start; }
+.rss-logo-right { justify-content: flex-end; }
+.rss-logo-none { margin: auto; font-size: 11px; color: var(--text); opacity: .6; }
+.rss-logo-cap { font-size: 12px; text-align: center; color: var(--text); }

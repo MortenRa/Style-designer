@@ -307,7 +307,7 @@ function renderPanel() {
     }
     if (s.headerMode === 'design') {
         headerBody += '<div class="rss-hint">Starts from the External Default Detailed design. Fonts and colours follow the theme.</div>';
-        headerBody += hfSection('Logo', 'hfLogo', [['right', 'Right'], ['left', 'Left'], ['none', 'None']]);
+        headerBody += logoSection();
         headerBody += hfSection('Page number', 'hfPageNumber', [['header', 'In the header'], ['footer', 'In the footer'], ['none', 'None']]);
         headerBody += hfSection('Pages after the first', 'hfLaterPages', [['minimal', 'Minimal header'], ['same', 'Same as first page']]);
         headerBody += hfSection('Footer', 'hfFooter', [['contact', 'Contact details'], ['bank', 'Contact + bank'], ['none', 'None']]);
@@ -493,6 +493,20 @@ function sumText(text) { return esc(text || ''); }
 
 function miniSwatches(colors) {
     return '<span class="rss-sum-sw">' + [6, 7, 8, 9].map(function (i) { return '<i style="background:#' + colors[i] + '"></i>'; }).join('') + '</span>';
+}
+
+// The logo choice shows the company logo in each position when it is known; otherwise the plain buttons.
+function logoSection() {
+    var options = [['left', 'Left'], ['right', 'Right'], ['none', 'None']];
+    var logo = studio.data.copilot && studio.data.copilot.logo;
+    if (!logo) return hfSection('Logo', 'hfLogo', options);
+    var current = studio.state.hfLogo;
+    var cells = options.map(function (o) {
+        var picture = o[0] === 'none' ? '<span class="rss-logo-none">none</span>' : '<img src="data:image/png;base64,' + logo + '" alt="">';
+        return '<button class="rss-logo-pick' + (o[0] === current ? ' on' : '') + '" data-hf="hfLogo" data-val="' + o[0] + '" title="' + o[1] + '">' +
+            '<span class="rss-logo-sheet rss-logo-' + o[0] + '">' + picture + '</span><span class="rss-logo-cap">' + o[1] + '</span></button>';
+    }).join('');
+    return sub('Logo', '<div class="rss-logo-row">' + cells + '</div>', '', sumText(optionLabel(options, current)));
 }
 
 function hfSection(title, key, options) {
