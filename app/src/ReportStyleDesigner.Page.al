@@ -62,6 +62,13 @@ page 50102 "Report Style Designer"
                     DraftTheme();
                 end;
 
+                trigger ClearSuggestionsRequested()
+                begin
+                    DesignerMgt.ClearSuggestions();
+                    DesignerMgt.GetConfig(Config);
+                    CurrPage.Designer.Init(DesignerMgt.BuildStudioData(Config));
+                end;
+
                 trigger ChooseDataRequested(State: Text)
                 begin
                     DesignerMgt.ApplyState(Config, State);

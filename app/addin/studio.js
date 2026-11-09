@@ -63,6 +63,12 @@ function StudioInit(root) {
         Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('DraftThemeRequested', []);
     });
     root.querySelector('#rss-design').addEventListener('change', function (e) { setDesignView(+e.target.value); });
+    // Delegated, because the panel is redrawn after every change.
+    root.addEventListener('click', function (e) {
+        if (e.target.closest && e.target.closest('[data-clear-suggestions]')) {
+            Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('ClearSuggestionsRequested', []);
+        }
+    });
     root.querySelectorAll('[data-view]').forEach(function (b) {
         b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
     });
@@ -261,7 +267,7 @@ function renderPanel() {
             }).join('');
             copilotBody = sub(SPARKLE + ' Copilot suggestions', '<div class="rss-carousel" role="list">' + cards + '</div>' +
                 '<div class="rss-carousel-hint">Swipe or scroll to see all ' + copilot.suggestions.length + ' themes</div>' +
-                '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare them</button></div>' +
+                '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare them</button> · <button class="rss-link" data-clear-suggestions="1">Clear suggestions</button></div>' +
                 (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
                 'AI-generated. Check the preview before you apply. You can still change everything below.',
                 sumText(picked ? picked.name : copilot.suggestions.length + ' proposals'));
@@ -874,7 +880,8 @@ function suggestionBanner() {
     var list = studio.data.copilot && studio.data.copilot.suggestions;
     if (!list || !list.length) return '';
     return '<div class="rss-cmp-banner"><span>Copilot suggested ' + list.length + ' themes.</span>' +
-        '<button class="rss-primary" data-compare="1">Compare them</button></div>';
+        '<button class="rss-primary" data-compare="1">Compare them</button>' +
+        '<button class="rss-link" data-clear-suggestions="1" title="Removes the Copilot suggestions for everyone">Clear</button></div>';
 }
 
 // Everything that is not cached goes to one background session; finished pages are picked up by polling.
