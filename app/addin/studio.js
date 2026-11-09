@@ -15,19 +15,14 @@ var studio = {
 };
 
 // The ten designer views. Theme and header/footer are never shown together: they stay in tabs (or steps).
+// Views 1, 3, 4, 7, 8 and 9 are removed from the choice (they looked too much alike).
 var DESIGN_VIEWS = [
-    { name: 'Simple: preview right', cls: 'v1', copilot: 'inline', density: 'simple' },
     { name: 'Simple: preview centre, Copilot on the side', cls: 'v2', copilot: 'aside', density: 'simple' },
-    { name: 'Simple: preview on top', cls: 'v3', copilot: 'inline', density: 'simple' },
-    { name: 'Full: preview right', cls: 'v4', copilot: 'inline', density: 'full' },
     { name: 'Full: preview left (standard)', cls: 'v5', copilot: 'inline', density: 'full' },
     { name: 'Copilot first: suggestions on the left', cls: 'v6', copilot: 'aside', density: 'simple' },
-    { name: 'Guided steps: wide preview below', cls: 'v7', copilot: 'inline', density: 'simple' },
-    { name: 'Compare: suggestions side by side', cls: 'v8', copilot: 'inline', density: 'full', compare: true },
-    { name: 'Your documents: grid', cls: 'v9', copilot: 'inline', density: 'full', gallery: true },
     { name: 'Full: centre, Copilot on the side', cls: 'v10', copilot: 'aside', density: 'full' }
 ];
-var DEFAULT_DESIGN = 4;
+var DEFAULT_DESIGN = 1;
 
 function currentDesignView() { return DESIGN_VIEWS[studio.design === undefined ? DEFAULT_DESIGN : studio.design]; }
 
