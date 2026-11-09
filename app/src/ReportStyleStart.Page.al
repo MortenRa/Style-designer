@@ -64,7 +64,6 @@ page 50105 "Report Style Start"
             {
                 ApplicationArea = All;
                 Caption = 'Preview and apply';
-                Image = Preview;
                 ToolTip = 'See the reports with these choices and apply them. More options are in the designer.';
 
                 trigger OnAction()

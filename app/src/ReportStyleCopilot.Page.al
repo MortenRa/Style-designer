@@ -104,7 +104,7 @@ page 50103 "Report Style Copilot"
                         else
                             ReportStyleCopilot.SetBackground(0);
                     end;
-                    ReportStyleCopilot.SetProposalCount(ProposalCountChoice.AsInteger() + 1);
+                    ReportStyleCopilot.SetProposalCount(ProposalCountNumber());
                     ReportStyleCopilot.Generate(UserPrompt, ReportName, ColoursForCopilot(), Proposals);
                     // The designer is the place to compare them: real preview, real swatches.
                     CurrPage.Close();
@@ -116,6 +116,23 @@ page 50103 "Report Style Copilot"
     trigger OnOpenPage()
     begin
         ProposalCountChoice := ProposalCountChoice::Three;
+    end;
+
+    local procedure ProposalCountNumber(): Integer
+    begin
+        case ProposalCountChoice of
+            ProposalCountChoice::One:
+                exit(1);
+            ProposalCountChoice::Two:
+                exit(2);
+            ProposalCountChoice::Three:
+                exit(3);
+            ProposalCountChoice::Four:
+                exit(4);
+            ProposalCountChoice::Five:
+                exit(5);
+        end;
+        exit(6);
     end;
 
     var
