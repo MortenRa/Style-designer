@@ -52,10 +52,9 @@ codeunit 50104 "Report Style Designer Mgt."
     begin
         CopilotEnabled := ReportStyleCopilot.IsAvailable();
         Copilot.Add('enabled', CopilotEnabled);
-        if CopilotEnabled then begin
-            ReportStyleCopilot.GetCompanyBrand(BrandHex, LogoBase64);
-            Copilot.Add('logo', LogoBase64);
-        end;
+        // The logo goes to the browser only, for the logo choice; it is never sent to Copilot.
+        ReportStyleCopilot.GetCompanyBrand(BrandHex, LogoBase64);
+        Copilot.Add('logo', LogoBase64);
         if Suggestions.ReadFrom(SuggestionsJson) then
             Copilot.Add('suggestions', Suggestions);
         Copilot.Add('customPalette', Enum::"Report Style Palette"::Custom.AsInteger());
