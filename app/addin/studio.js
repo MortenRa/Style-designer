@@ -232,6 +232,7 @@ function renderPanel() {
                     swatchRow(g.colors) + '<div class="rss-card-caption">' + esc(g.name) + '</div></button>';
             }).join('');
             themeBody += sub(SPARKLE + ' Copilot suggestions', '<div class="rss-grid">' + cards + '</div>' +
+                '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare these on my documents</button></div>' +
                 (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
                 'AI-generated. Check the preview before you apply. You can still change everything below.',
                 sumText(picked ? picked.name : copilot.suggestions.length + ' proposals'));
@@ -430,6 +431,11 @@ function wirePanel(panel) {
         renderPanel();
         requestPreview(0);
     });
+    on(panel, '[data-compare]', function () {
+        if (!studio.data.copilot || !studio.data.copilot.suggestions || !studio.data.copilot.suggestions.length) return;
+        gallery.compare = studio.data.copilot.suggestions.slice();
+        if (studio.view === 'gallery') renderGallery(); else setView('gallery');
+    });
     on(panel, '[data-fonts]', function (el) { s.fonts = +el.getAttribute('data-fonts'); renderPanel(); requestPreview(); });
     on(panel, '[data-table]', function (el) { s.tableStyle = +el.getAttribute('data-table'); renderPanel(); requestPreview(); });
     on(panel, '[data-page]', function (el) { s.pageColor = +el.getAttribute('data-page'); renderPanel(); requestPreview(); });
@@ -597,7 +603,8 @@ var GALLERY_MAX = 6;          // own selection
 var GALLERY_GROUP_MAX = 12;   // a document group
 // Typical customer-facing documents, preferred when the gallery is filled for the first time.
 var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
-var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '' };
+var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '', compare: null };
+var COMPARE_MAX_DOCS = 4;     // a comparison renders every suggestion on every document, so keep the grid small
 var GALLERY_TIMEOUT_MS = 120000;
 
 function setView(view) {
@@ -613,7 +620,7 @@ function setView(view) {
     byId('rss-pages').hidden = view === 'gallery';
     hide('rss-error');
     if (view === 'gallery') { hide('rss-overlay'); refreshGallery(0); }
-    else { gallery.queue = []; gallery.jobs = {}; stopGalleryPoll(); requestPreview(0); }
+    else { gallery.queue = []; gallery.jobs = {}; gallery.compare = null; stopGalleryPoll(); requestPreview(0); }
 }
 
 function docKey(l) { return l.reportId + '|' + l.name; }
@@ -675,6 +682,7 @@ function renderGallery() {
     if (!host || studio.view !== 'gallery') return;
     var docs = galleryDocs(), style = styleKey(), groupId = galleryGroup(), groups = studio.data.groups || [];
     var group = groups.filter(function (g) { return g.id === groupId; })[0];
+    if (gallery.compare) { renderComparison(docs.slice(0, COMPARE_MAX_DOCS)); return; }
     gallery.queue = [];
     var tabs = groups.map(function (g) {
         return '<button class="' + (g.id === groupId ? 'on' : '') + '" data-ggroup="' + g.id + '"' + (g.reports.length ? '' : ' disabled') + '>' +
@@ -739,6 +747,48 @@ function renderGallery() {
     sendGalleryBatch();
 }
 
+// The designer's style with one Copilot suggestion applied, the same way a click on the suggestion applies it.
+function suggestionState(g) {
+    var s = JSON.parse(JSON.stringify(studio.state));
+    s.palette = studio.data.copilot.customPalette;
+    s.customColors = g.colors.slice();
+    s.fonts = g.fonts;
+    s.tableStyle = g.tableStyle;
+    s.pageColor = g.pageColor;
+    if (g.customPage) s.customPage = g.customPage;
+    s.themeName = g.name;
+    return JSON.stringify(s);
+}
+
+// Suggestions in rows, documents in columns: one theme across several reports, so the differences show.
+function renderComparison(docs) {
+    var host = byId('rss-gallery'), suggestions = gallery.compare, cells = [];
+    var cols = docs.length ? ' repeat(' + docs.length + ', minmax(150px, 1fr))' : '';
+    var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
+        '<span class="rss-gal-note">One row per Copilot theme, one column per document. <button class="rss-link" data-cmp-exit>Back to my documents</button></span></div>' +
+        '<div class="rss-cmp" style="grid-template-columns: 200px' + cols + '">' +
+        '<div></div>' + docs.map(function (l) {
+            return '<div class="rss-cmp-head"><b>' + esc(l.reportName) + '</b><small>' + esc(l.caption || l.name) + '</small></div>';
+        }).join('');
+    suggestions.forEach(function (g, k) {
+        var style = suggestionState(g);
+        html += '<div class="rss-cmp-label"><b>' + esc(g.name) + '</b><small>' + esc(g.reason) + '</small></div>';
+        docs.forEach(function (l, i) {
+            var index = 'c' + k + '-' + i;
+            html += '<div class="rss-gal-thumb rss-cmp-cell" id="rss-gal-' + index + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>';
+            cells.push({ index: index, doc: l, style: style });
+        });
+    });
+    host.innerHTML = html + '</div>';
+    host.querySelector('[data-cmp-exit]').addEventListener('click', function () { gallery.compare = null; renderGallery(); });
+    cells.forEach(function (c) {
+        var key = docKey(c.doc) + '|' + c.style;
+        var hit = gallery.cache[key];
+        if (hit) showGalleryResult(c.index, hit); else gallery.queue.push({ index: c.index, doc: c.doc, key: key, state: c.style });
+    });
+    sendGalleryBatch();
+}
+
 // Everything that is not cached goes to one background session; finished pages are picked up by polling.
 function sendGalleryBatch() {
     gallery.jobs = {};
@@ -749,7 +799,9 @@ function sendGalleryBatch() {
         gallery.jobs[gallery.seq] = item;
         var box = byId('rss-gal-' + item.index);
         if (box) box.innerHTML = '<div class="rss-gal-wait"><div class="rss-spinner"></div>Rendering…</div>';
-        return { reportId: item.doc.reportId, name: item.doc.name, appId: item.doc.appId || '', seq: gallery.seq };
+        var entry = { reportId: item.doc.reportId, name: item.doc.name, appId: item.doc.appId || '', seq: gallery.seq };
+        if (item.state) entry.state = item.state;   // a comparison cell carries its own style
+        return entry;
     });
     gallery.queue = [];
     gallery.started = Date.now();
