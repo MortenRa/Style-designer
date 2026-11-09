@@ -24,6 +24,11 @@ function StudioInit(root) {
         '      <div class="rss-view" role="tablist" aria-label="Preview">' +
         '        <button class="on" data-view="single" role="tab" aria-selected="true">This document</button>' +
         '        <button data-view="gallery" role="tab" aria-selected="false">Your documents</button></div>' +
+        '      <button class="rss-primary rss-draft" data-draft="1" title="Describe a look and get three Copilot themes">Draft a theme</button>' +
+        '      <div class="rss-layout" role="tablist" aria-label="Layout">' +
+        '        <button data-layout="left" class="on" role="tab">Preview left</button>' +
+        '        <button data-layout="center" role="tab">Preview centre</button>' +
+        '        <button data-layout="right" role="tab">Preview right</button></div>' +
         '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until you apply.</div>' +
         '    </header>' +
         '    <div class="rss-stage" id="rss-stage">' +
@@ -36,6 +41,12 @@ function StudioInit(root) {
         '  <aside class="rss-panel" id="rss-panel"><div class="rss-loading">Loading…</div></aside>' +
         '  <div class="rss-toast" id="rss-toast" hidden></div>' +
         '</div>';
+    root.querySelector('[data-draft]').addEventListener('click', function () {
+        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('DraftThemeRequested', []);
+    });
+    root.querySelectorAll('[data-layout]').forEach(function (b) {
+        b.addEventListener('click', function () { setLayout(b.getAttribute('data-layout')); });
+    });
     root.querySelectorAll('[data-view]').forEach(function (b) {
         b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
     });
@@ -324,7 +335,9 @@ function renderPanel() {
     // 3 · Apply
     // Two tabs (the two configuration modes); the document picker above and the apply bar below apply to both.
     var tab = studio.tab || 'theme';
-    html += suggestionBanner() + '<div class="rss-tabs" role="tablist">' +
+    // The document picker (pickerHtml) sits above the tabs; the centre layout puts it in the left column.
+    var pickerHtml = html;
+    html = '<div class="rss-tabs" role="tablist">' +
         tabButton('theme', 'Theme', themeState()) +
         tabButton('header', 'Header & footer', headerState()) + '</div>';
     var tabKeys = tab === 'theme' ? themeKeys : headerKeys;
@@ -355,7 +368,14 @@ function renderPanel() {
     var previous = byId('rss-scroll');
     var scrollTop = previous && !studio.tabChanged ? previous.scrollTop : 0;
     studio.tabChanged = false;
-    panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + html + '</div>' + applyBar;
+    if (studio.layout === 'center') {
+        // Options on both sides of the preview: theme on the left, header and footer on the right with Apply.
+        panel.innerHTML = '<div class="rss-col rss-col-theme">' +
+            '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + themeBody + '</div></div>' +
+            '<div class="rss-col rss-col-header"><div class="rss-scroll rss-scroll-h">' + headerBody + '</div>' + applyBar + '</div>';
+    } else {
+        panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + html + '</div>' + applyBar;
+    }
     byId('rss-scroll').scrollTop = scrollTop;
     wirePanel(panel);
 }
@@ -607,6 +627,16 @@ var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 1
 var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '', compare: null, cmp: null, expected: {} };
 var COMPARE_MAX_DOCS = 4;     // a comparison renders every suggestion on every document, so keep the grid small
 var GALLERY_TIMEOUT_MS = 120000;
+
+// Where the preview sits: left (default), centre (options on both sides) or right.
+function setLayout(layout) {
+    studio.layout = layout;
+    var root = studio.root.querySelector('.rss');
+    root.classList.remove('layout-left', 'layout-center', 'layout-right');
+    root.classList.add('layout-' + layout);
+    studio.root.querySelectorAll('[data-layout]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-layout') === layout); });
+    if (studio.data) renderPanel();
+}
 
 function setView(view) {
     if (studio.view === view || !studio.data) return;

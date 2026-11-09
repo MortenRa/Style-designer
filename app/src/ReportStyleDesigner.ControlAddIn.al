@@ -20,6 +20,8 @@ controladdin "Report Style Designer"
     event SaveRequested(State: Text; Mode: Text);
     event ChooseDataRequested(State: Text);
     event ClearDataRequested(State: Text);
+    // The visible "Draft a theme" button in the add-in: the same as the page's Copilot action.
+    event DraftThemeRequested();
     // Sent once after loading: the main colours read from the company logo (JSON array of hex), for the page's
     // Copilot prompt action. Only these colours go to Copilot, never the picture.
     event LogoColorsComputed(Colors: Text);

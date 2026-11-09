@@ -57,6 +57,11 @@ page 50102 "Report Style Designer"
                         CurrPage.Designer.Notify(GetLastErrorText(), 'error');
                 end;
 
+                trigger DraftThemeRequested()
+                begin
+                    DraftTheme();
+                end;
+
                 trigger ChooseDataRequested(State: Text)
                 begin
                     DesignerMgt.ApplyState(Config, State);

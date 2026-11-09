@@ -278,3 +278,18 @@
 .rss-cmp-doc { font: inherit; background: none; border: 2px solid transparent; border-radius: 8px; padding: 4px; cursor: pointer; text-align: left; min-width: 0; }
 .rss-cmp-doc.on { border-color: var(--accent); }
 .rss-cmp-doc span { display: block; font-size: 11.5px; margin-top: 4px; color: var(--text); }
+
+/* Draft a theme button and the three layouts (preview left, centre, right). */
+.rss-draft { white-space: nowrap; margin-right: 12px; }
+.rss-layout { display: inline-flex; border: 1px solid var(--control); border-radius: 6px; overflow: hidden; margin-right: 12px; }
+.rss-layout button { font: inherit; font-size: 12px; padding: 5px 10px; border: 0; border-right: 1px solid var(--control); background: #fff; cursor: pointer; }
+.rss-layout button:last-child { border-right: 0; }
+.rss-layout button.on { background: var(--accent); color: #fff; }
+.rss.layout-right .rss-panel { order: -1; border-left: 0; border-right: 1px solid var(--line); }
+.rss.layout-center { display: grid; grid-template-columns: 330px minmax(0, 1fr) 330px; }
+.rss.layout-center .rss-preview { grid-column: 2; grid-row: 1; }
+.rss.layout-center .rss-panel { display: contents; }
+.rss.layout-center .rss-col { grid-row: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; background: var(--panel); overflow: hidden; }
+.rss.layout-center .rss-col-theme { grid-column: 1; border-right: 1px solid var(--line); }
+.rss.layout-center .rss-col-header { grid-column: 3; border-left: 1px solid var(--line); }
+.rss.layout-center .rss-col .rss-scroll, .rss.layout-center .rss-col .rss-scroll-h { flex: 1 1 auto; overflow-y: auto; padding: 8px 18px 24px; }
