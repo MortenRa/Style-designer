@@ -101,7 +101,7 @@ page 50105 "Report Style Start"
                 field(AdviceText; AdviceText)
                 {
                     ApplicationArea = All;
-                    ShowCaption = false;
+                    Caption = 'Advice';
                     Editable = false;
                     MultiLine = true;
                     ToolTip = 'Soft recommendations based on the settings. They explain a likely problem; you can still apply the style.';
@@ -142,7 +142,8 @@ page 50105 "Report Style Start"
         DesignerMgt.GetConfig(Rec);
     end;
 
-    trigger OnAfterGetCurrRecord()
+    // A Card page fills its non-source fields here, not in OnAfterGetCurrRecord (that is for list pages).
+    trigger OnAfterGetRecord()
     begin
         RefreshAdvice();
     end;
