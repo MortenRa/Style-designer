@@ -347,8 +347,8 @@ function renderPanel() {
         (docGroup ? '<label class="rss-radio" title="Every Body layout of the ' + docGroup.reports.length + ' reports in this group"><input type="radio" name="rss-target" value="group"' + (s.applyTo === 'group' ? ' checked' : '') + '> all ' + esc(docGroup.caption.toLowerCase()) + ' (' + docGroup.reports.length + ')</label>' : '') +
         '<label class="rss-radio"><input type="radio" name="rss-target" value="company"' + (s.applyTo === 'company' ? ' checked' : '') + '> company default</label></div>' +
         '<div class="rss-apply-actions">' +
-        (s.themeMode === 'custom' ? '<button class="rss-secondary" data-save="theme">Only save the theme</button>' : '') +
-        '<button class="rss-primary" data-save="apply"' + (nothing ? ' disabled' : '') + '>Apply</button></div>' +
+        (s.themeMode === 'custom' ? '<button class="rss-secondary" data-save="theme" title="Saves the theme as a draft. Nothing changes for any report until you choose Apply.">Save as draft</button>' : '') +
+        '<button class="rss-primary" data-save="apply" title="Changes the reports that use this style, so customers receive the new look."' + (nothing ? ' disabled' : '') + '>Apply</button></div>' +
         '</div>';
 
     var panel = byId('rss-panel');
