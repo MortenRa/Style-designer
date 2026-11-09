@@ -242,7 +242,8 @@ function renderPanel() {
                 return '<button class="rss-card' + (on ? ' on' : '') + '" data-suggestion="' + i + '" title="' + esc(g.reason) + '">' +
                     swatchRow(g.colors) + '<div class="rss-card-caption">' + esc(g.name) + '</div></button>';
             }).join('');
-            themeBody += sub(SPARKLE + ' Copilot suggestions', '<div class="rss-grid">' + cards + '</div>' +
+            themeBody += sub(SPARKLE + ' Copilot suggestions', '<div class="rss-carousel" role="list">' + cards + '</div>' +
+                '<div class="rss-carousel-hint">Swipe or scroll to see all ' + copilot.suggestions.length + ' themes</div>' +
                 '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare them</button></div>' +
                 (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
                 'AI-generated. Check the preview before you apply. You can still change everything below.',

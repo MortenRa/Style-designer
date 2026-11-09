@@ -38,6 +38,10 @@
 .rss-chip-tag { margin-left: 6px; font-size: 10px; opacity: .75; text-transform: uppercase; }
 
 .rss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Copilot suggestions as a horizontal carousel: one card in full view, the next one peeking in. */
+.rss-carousel { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+.rss-carousel > * { flex: 0 0 78%; scroll-snap-align: start; min-width: 0; }
+.rss-carousel-hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 .rss-card, .rss-font { font: inherit; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px; cursor: pointer; transition: transform .12s, box-shadow .12s, border-color .12s; }
 .rss-card:hover, .rss-font:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .rss-card.on, .rss-font.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
