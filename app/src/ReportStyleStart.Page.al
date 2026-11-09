@@ -22,21 +22,41 @@ page 50105 "Report Style Start"
                 {
                     ApplicationArea = All;
                     ToolTip = 'The main colours of the reports. "Keep base theme colours" leaves them as they are.';
+
+                    trigger OnValidate()
+                    begin
+                        RefreshAdvice();
+                    end;
                 }
                 field("Font Pair"; Rec."Font Pair")
                 {
                     ApplicationArea = All;
                     ToolTip = 'The fonts for headings and text. Only fonts that print correctly are offered.';
+
+                    trigger OnValidate()
+                    begin
+                        RefreshAdvice();
+                    end;
                 }
                 field("Page Color"; Rec."Page Color")
                 {
                     ApplicationArea = All;
                     ToolTip = 'The background of the page. White is the safest choice for printing.';
+
+                    trigger OnValidate()
+                    begin
+                        RefreshAdvice();
+                    end;
                 }
                 field("Table Style"; Rec."Table Style")
                 {
                     ApplicationArea = All;
                     ToolTip = 'How lines with many rows, such as invoice lines, look.';
+
+                    trigger OnValidate()
+                    begin
+                        RefreshAdvice();
+                    end;
                 }
             }
             group(Layout)
@@ -51,17 +71,40 @@ page 50105 "Report Style Start"
                     trigger OnValidate()
                     begin
                         ApplyComposition();
+                        RefreshAdvice();
                     end;
                 }
                 field("HF Show Date"; Rec."HF Show Date")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Show the date in the header.';
+
+                    trigger OnValidate()
+                    begin
+                        RefreshAdvice();
+                    end;
                 }
                 field("HF Accent Line"; Rec."HF Accent Line")
                 {
                     ApplicationArea = All;
                     ToolTip = 'Draw a coloured line under the header.';
+
+                    trigger OnValidate()
+                    begin
+                        RefreshAdvice();
+                    end;
+                }
+            }
+            group(Advice)
+            {
+                Caption = 'Recommendations';
+                field(AdviceText; AdviceText)
+                {
+                    ApplicationArea = All;
+                    ShowCaption = false;
+                    Editable = false;
+                    MultiLine = true;
+                    ToolTip = 'Soft recommendations based on the settings. They explain a likely problem; you can still apply the style.';
                 }
             }
         }
@@ -89,11 +132,26 @@ page 50105 "Report Style Start"
         }
     }
 
+    var
+        AdviceText: Text;
+
     trigger OnOpenPage()
     var
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
     begin
         DesignerMgt.GetConfig(Rec);
+    end;
+
+    trigger OnAfterGetCurrRecord()
+    begin
+        RefreshAdvice();
+    end;
+
+    local procedure RefreshAdvice()
+    var
+        Advice: Codeunit "Report Style Advice";
+    begin
+        AdviceText := Advice.GetAdviceText(Rec);
     end;
 
     local procedure ApplyComposition()
