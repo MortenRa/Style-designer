@@ -44,7 +44,7 @@ function StudioInit(root) {
         '      <div class="rss-view" role="tablist" aria-label="Preview">' +
         '        <button class="on" data-view="single" role="tab" aria-selected="true">This document</button>' +
         '        <button data-view="gallery" role="tab" aria-selected="false">Your documents</button></div>' +
-        '      <button class="rss-primary rss-draft" data-draft="1" title="Describe a look and get three Copilot themes">Draft a theme</button>' +
+        '      <button class="rss-draft" data-draft="1" title="Describe a look and Copilot suggests three themes">' + SPARKLE + 'Draft with Copilot</button>' +
         '      <label class="rss-design-pick">View <select class="rss-select" id="rss-design">' + designOptions + '</select></label>' +
         '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until you apply.</div>' +
         '    </header>' +
