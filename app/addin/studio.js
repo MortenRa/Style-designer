@@ -892,7 +892,7 @@ function renderComparison(docs) {
         var key = id === 'big-a' ? 'a' : 'b';
         return '<div class="rss-cmp-side"><div class="rss-cmp-stage">' +
             '<button class="rss-car-nav" data-cmp-step="' + key + '" data-delta="-1" aria-label="Previous theme">‹</button>' +
-            '<div class="rss-gal-thumb rss-cmp-large" id="rss-gal-' + id + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>' +
+            '<div class="rss-gal-thumb rss-cmp-large" id="rss-gal-' + id + '" data-zoom="' + id + '" title="Click to see it larger"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>' +
             '<button class="rss-car-nav" data-cmp-step="' + key + '" data-delta="1" aria-label="Next theme">›</button></div>' +
             '<b>' + esc(g.name) + '</b><small>' + esc(g.reason) + '</small></div>';
     };
@@ -913,6 +913,17 @@ function renderComparison(docs) {
     host.querySelectorAll('[data-cmp-a]').forEach(function (b) { b.addEventListener('click', function () { cmp.a = +b.getAttribute('data-cmp-a'); renderGallery(); }); });
     host.querySelectorAll('[data-cmp-b]').forEach(function (b) { b.addEventListener('click', function () { cmp.b = +b.getAttribute('data-cmp-b'); renderGallery(); }); });
     host.querySelectorAll('[data-cmp-doc]').forEach(function (b) { b.addEventListener('click', function () { cmp.doc = +b.getAttribute('data-cmp-doc'); renderGallery(); }); });
+    // A click on a big preview shows it larger; drawn again at the larger width from the cached PDF.
+    host.querySelectorAll('[data-zoom]').forEach(function (el) {
+        el.addEventListener('click', function () {
+            var index = el.getAttribute('data-zoom');
+            var box = byId('rss-gal-' + index);
+            if (!box) return;
+            box.classList.toggle('rss-zoomed');
+            var hit = gallery.cache[gallery.expected[index]];
+            if (hit) showGalleryResult(index, hit);
+        });
+    });
     host.querySelectorAll('[data-cmp-step]').forEach(function (b) {
         b.addEventListener('click', function () {
             var key = b.getAttribute('data-cmp-step'), n = list.length;
