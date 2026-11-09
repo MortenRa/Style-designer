@@ -14,8 +14,28 @@ var studio = {
     foldKeys: []                  // sections on the current tab, for "Collapse all"
 };
 
+// The ten designer views. Theme and header/footer are never shown together: they stay in tabs (or steps).
+var DESIGN_VIEWS = [
+    { name: 'Simple: preview right', cls: 'v1', copilot: 'inline', density: 'simple' },
+    { name: 'Simple: preview centre, Copilot on the side', cls: 'v2', copilot: 'aside', density: 'simple' },
+    { name: 'Simple: preview on top', cls: 'v3', copilot: 'inline', density: 'simple' },
+    { name: 'Full: preview right', cls: 'v4', copilot: 'inline', density: 'full' },
+    { name: 'Full: preview left (standard)', cls: 'v5', copilot: 'inline', density: 'full' },
+    { name: 'Copilot first: suggestions on the left', cls: 'v6', copilot: 'aside', density: 'simple' },
+    { name: 'Guided steps: wide preview below', cls: 'v7', copilot: 'inline', density: 'simple' },
+    { name: 'Compare: suggestions side by side', cls: 'v8', copilot: 'inline', density: 'full', compare: true },
+    { name: 'Your documents: grid', cls: 'v9', copilot: 'inline', density: 'full', gallery: true },
+    { name: 'Full: centre, Copilot on the side', cls: 'v10', copilot: 'aside', density: 'full' }
+];
+var DEFAULT_DESIGN = 4;
+
+function currentDesignView() { return DESIGN_VIEWS[studio.design === undefined ? DEFAULT_DESIGN : studio.design]; }
+
 function StudioInit(root) {
     studio.root = root;
+    var designOptions = DESIGN_VIEWS.map(function (v, i) {
+        return '<option value="' + i + '"' + (i === DEFAULT_DESIGN ? ' selected' : '') + '>' + (i + 1) + '. ' + esc(v.name) + '</option>';
+    }).join('');
     root.innerHTML =
         '<div class="rss">' +
         '  <section class="rss-preview">' +
@@ -25,10 +45,7 @@ function StudioInit(root) {
         '        <button class="on" data-view="single" role="tab" aria-selected="true">This document</button>' +
         '        <button data-view="gallery" role="tab" aria-selected="false">Your documents</button></div>' +
         '      <button class="rss-primary rss-draft" data-draft="1" title="Describe a look and get three Copilot themes">Draft a theme</button>' +
-        '      <div class="rss-layout" role="tablist" aria-label="Layout">' +
-        '        <button data-layout="left" class="on" role="tab">Preview left</button>' +
-        '        <button data-layout="center" role="tab">Preview centre</button>' +
-        '        <button data-layout="right" role="tab">Preview right</button></div>' +
+        '      <label class="rss-design-pick">View <select class="rss-select" id="rss-design">' + designOptions + '</select></label>' +
         '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until you apply.</div>' +
         '    </header>' +
         '    <div class="rss-stage" id="rss-stage">' +
@@ -39,14 +56,13 @@ function StudioInit(root) {
         '    </div>' +
         '  </section>' +
         '  <aside class="rss-panel" id="rss-panel"><div class="rss-loading">Loading…</div></aside>' +
+        '  <aside class="rss-copilot" id="rss-copilot" hidden></aside>' +
         '  <div class="rss-toast" id="rss-toast" hidden></div>' +
         '</div>';
     root.querySelector('[data-draft]').addEventListener('click', function () {
         Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('DraftThemeRequested', []);
     });
-    root.querySelectorAll('[data-layout]').forEach(function (b) {
-        b.addEventListener('click', function () { setLayout(b.getAttribute('data-layout')); });
-    });
+    root.querySelector('#rss-design').addEventListener('change', function (e) { setDesignView(+e.target.value); });
     root.querySelectorAll('[data-view]').forEach(function (b) {
         b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
     });
@@ -229,6 +245,7 @@ function renderPanel() {
 
     // 1 · Theme
     var copilot = d.copilot || {};
+    var copilotBody = '';   // the suggestions; placed in the theme tab or in the side panel, depending on the view
     // Copilot starts from the page's prompt action ("Draft a theme", top right), like other Business Central pages.
     var themeBody = modeSwitch('theme', s.themeMode, [['keep', 'Keep current'], ['default', 'Use default'], ['custom', 'Customize']]) +
         currentLine('theme', layout);
@@ -242,12 +259,13 @@ function renderPanel() {
                 return '<button class="rss-card' + (on ? ' on' : '') + '" data-suggestion="' + i + '" title="' + esc(g.reason) + '">' +
                     swatchRow(g.colors) + '<div class="rss-card-caption">' + esc(g.name) + '</div></button>';
             }).join('');
-            themeBody += sub(SPARKLE + ' Copilot suggestions', '<div class="rss-carousel" role="list">' + cards + '</div>' +
+            copilotBody = sub(SPARKLE + ' Copilot suggestions', '<div class="rss-carousel" role="list">' + cards + '</div>' +
                 '<div class="rss-carousel-hint">Swipe or scroll to see all ' + copilot.suggestions.length + ' themes</div>' +
                 '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare them</button></div>' +
                 (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
                 'AI-generated. Check the preview before you apply. You can still change everything below.',
                 sumText(picked ? picked.name : copilot.suggestions.length + ' proposals'));
+            if (currentDesignView().copilot !== 'aside') themeBody += copilotBody;
         }
         var base = d.themes.filter(function (t) { return t.name === s.baseTheme; })[0];
         // A list of the themes in the tenant (like the header/footer designs), so it stays usable with many themes.
@@ -369,15 +387,14 @@ function renderPanel() {
     var previous = byId('rss-scroll');
     var scrollTop = previous && !studio.tabChanged ? previous.scrollTop : 0;
     studio.tabChanged = false;
-    if (studio.layout === 'center') {
-        // Options on both sides of the preview: theme on the left, header and footer on the right with Apply.
-        panel.innerHTML = '<div class="rss-col rss-col-theme">' +
-            '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + themeBody + '</div></div>' +
-            '<div class="rss-col rss-col-header"><div class="rss-scroll rss-scroll-h">' + headerBody + '</div>' + applyBar + '</div>';
-    } else {
-        panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + html + '</div>' + applyBar;
-    }
+    panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + html + '</div>' + applyBar;
     byId('rss-scroll').scrollTop = scrollTop;
+    // The suggestions in the side panel (views where Copilot sits beside the preview).
+    var aside = byId('rss-copilot');
+    var showAside = currentDesignView().copilot === 'aside' && copilotBody !== '';
+    aside.hidden = !showAside;
+    aside.innerHTML = showAside ? '<div class="rss-scroll">' + copilotBody + '</div>' : '';
+    if (showAside) bindSuggestions(aside);
     wirePanel(panel);
 }
 
@@ -399,6 +416,29 @@ function headerState() {
     if (m === 'default') return { text: 'Default', changed: true };
     return { text: 'Keep current', changed: false };
 }
+// Click handlers for the Copilot suggestions, wherever they are shown (theme tab or side panel).
+function bindSuggestions(root) {
+    var s = studio.state;
+    on(root, '[data-suggestion]', function (el) {
+        var g = studio.data.copilot.suggestions[+el.getAttribute('data-suggestion')];
+        s.palette = studio.data.copilot.customPalette;
+        s.customColors = g.colors.slice();
+        s.fonts = g.fonts;
+        s.tableStyle = g.tableStyle;
+        s.pageColor = g.pageColor;
+        if (g.customPage) s.customPage = g.customPage;
+        s.themeName = g.name;
+        renderPanel();
+        requestPreview(0);
+    });
+    on(root, '[data-compare]', function () {
+        if (!studio.data.copilot || !studio.data.copilot.suggestions || !studio.data.copilot.suggestions.length) return;
+        gallery.compare = studio.data.copilot.suggestions.slice();
+        gallery.cmp = null;
+        if (studio.view === 'gallery') renderGallery(); else setView('gallery');
+    });
+}
+
 function wirePanel(panel) {
     var s = studio.state;
     wirePicker();
@@ -440,24 +480,7 @@ function wirePanel(panel) {
     var baseTheme = byId('rss-basetheme');
     if (baseTheme) baseTheme.addEventListener('change', function (e) { s.baseTheme = e.target.value; renderPanel(); requestPreview(0); });
     on(panel, '[data-palette]', function (el) { s.palette = +el.getAttribute('data-palette'); renderPanel(); requestPreview(); });
-    on(panel, '[data-suggestion]', function (el) {
-        var g = studio.data.copilot.suggestions[+el.getAttribute('data-suggestion')];
-        s.palette = studio.data.copilot.customPalette;
-        s.customColors = g.colors.slice();
-        s.fonts = g.fonts;
-        s.tableStyle = g.tableStyle;
-        s.pageColor = g.pageColor;
-        if (g.customPage) s.customPage = g.customPage;
-        s.themeName = g.name;
-        renderPanel();
-        requestPreview(0);
-    });
-    on(panel, '[data-compare]', function () {
-        if (!studio.data.copilot || !studio.data.copilot.suggestions || !studio.data.copilot.suggestions.length) return;
-        gallery.compare = studio.data.copilot.suggestions.slice();
-        gallery.cmp = null;
-        if (studio.view === 'gallery') renderGallery(); else setView('gallery');
-    });
+    bindSuggestions(panel);
     on(panel, '[data-fonts]', function (el) { s.fonts = +el.getAttribute('data-fonts'); renderPanel(); requestPreview(); });
     on(panel, '[data-table]', function (el) { s.tableStyle = +el.getAttribute('data-table'); renderPanel(); requestPreview(); });
     on(panel, '[data-page]', function (el) { s.pageColor = +el.getAttribute('data-page'); renderPanel(); requestPreview(); });
@@ -629,14 +652,22 @@ var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null,
 var COMPARE_MAX_DOCS = 4;     // a comparison renders every suggestion on every document, so keep the grid small
 var GALLERY_TIMEOUT_MS = 120000;
 
-// Where the preview sits: left (default), centre (options on both sides) or right.
-function setLayout(layout) {
-    studio.layout = layout;
+// Applies one of the ten views: sets its classes, then shows the gallery or the single preview again.
+function setDesignView(index) {
+    studio.design = index;
+    var v = currentDesignView();
     var root = studio.root.querySelector('.rss');
-    root.classList.remove('layout-left', 'layout-center', 'layout-right');
-    root.classList.add('layout-' + layout);
-    studio.root.querySelectorAll('[data-layout]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-layout') === layout); });
-    if (studio.data) renderPanel();
+    root.className = 'rss ' + v.cls + ' d-' + v.density;
+    if (!studio.data) return;
+    if (v.compare || v.gallery) {
+        var suggestions = studio.data.copilot && studio.data.copilot.suggestions;
+        gallery.compare = (v.compare && suggestions && suggestions.length) ? suggestions.slice() : null;
+        gallery.cmp = null;
+        if (studio.view === 'gallery') renderGallery(); else setView('gallery');
+    } else {
+        gallery.compare = null;
+        if (studio.view === 'gallery') setView('single'); else renderPanel();
+    }
 }
 
 function setView(view) {
