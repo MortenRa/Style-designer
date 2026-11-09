@@ -193,6 +193,7 @@ page 50102 "Report Style Designer"
         if not CopilotDialog.GetProposals(Proposals) then
             exit;
         Suggestions := ReportStyleCopilot.ProposalsToJson(Proposals);
+        DesignerMgt.SaveSuggestions(Suggestions);
         // Only the draft changes: the first proposal goes into the preview, the others are one click away.
         Proposals.FindFirst();
         ReportStyleCopilot.ApplyProposal(Config, Proposals);

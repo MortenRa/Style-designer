@@ -17,6 +17,31 @@ codeunit 50104 "Report Style Designer Mgt."
         HeaderFooterBaseTok: Label 'ExternalDefaultDetailedHFDesign', Locked = true;
         PreviewBusyErr: Label 'This report is being previewed in another window. Try again in a moment.';
 
+    /// Keeps the last Copilot proposals on the stored configuration. Only the suggestions are written, not the draft.
+    procedure SaveSuggestions(SuggestionsJson: Text)
+    var
+        StoredConfig: Record "Report Style Config";
+        OutStream: OutStream;
+    begin
+        GetConfig(StoredConfig);
+        StoredConfig."Copilot Suggestions".CreateOutStream(OutStream, TextEncoding::UTF8);
+        OutStream.WriteText(SuggestionsJson);
+        StoredConfig.Modify();
+    end;
+
+    local procedure StoredSuggestions(var Config: Record "Report Style Config"): Text
+    var
+        InStream: InStream;
+        Result: Text;
+    begin
+        Config.CalcFields("Copilot Suggestions");
+        if not Config."Copilot Suggestions".HasValue() then
+            exit('');
+        Config."Copilot Suggestions".CreateInStream(InStream, TextEncoding::UTF8);
+        InStream.ReadText(Result);
+        exit(Result);
+    end;
+
     procedure GetConfig(var Config: Record "Report Style Config")
     begin
         if Config.Get() then begin
@@ -50,6 +75,9 @@ codeunit 50104 "Report Style Designer Mgt."
         Result: Text;
         CopilotEnabled: Boolean;
     begin
+        // Without new proposals, the last ones are shown again.
+        if SuggestionsJson = '' then
+            SuggestionsJson := StoredSuggestions(Config);
         CopilotEnabled := ReportStyleCopilot.IsAvailable();
         Copilot.Add('enabled', CopilotEnabled);
         // The logo goes to the browser only, for the logo choice; it is never sent to Copilot.

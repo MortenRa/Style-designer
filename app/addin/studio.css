@@ -262,3 +262,19 @@
 .rss-cmp-head small, .rss-cmp-label small { display: block; color: var(--muted); font-size: 11.5px; }
 .rss-cmp-label { padding-top: 6px; }
 .rss-cmp-cell { min-width: 0; }
+
+/* Copilot comparison: banner, theme pickers, two large previews, document strip. */
+.rss-cmp-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; margin-bottom: 10px; border: 1px solid var(--accent); border-radius: 8px; font-size: 13px; }
+.rss-chip { font: inherit; font-size: 12px; padding: 4px 10px; margin: 2px 4px 2px 0; border: 1px solid var(--control); border-radius: 14px; background: #fff; cursor: pointer; }
+.rss-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rss-cmp-pick { display: grid; gap: 8px; margin-bottom: 12px; font-size: 12px; }
+.rss-cmp-pick span { color: var(--muted); margin-right: 8px; }
+.rss-cmp-big { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.rss-cmp-side { min-width: 0; font-size: 12.5px; }
+.rss-cmp-side small { display: block; color: var(--muted); font-size: 11.5px; }
+.rss-cmp-large { aspect-ratio: 1 / 1.414; }
+.rss-cmp-docs-head { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.rss-cmp-docs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rss-cmp-doc { font: inherit; background: none; border: 2px solid transparent; border-radius: 8px; padding: 4px; cursor: pointer; text-align: left; min-width: 0; }
+.rss-cmp-doc.on { border-color: var(--accent); }
+.rss-cmp-doc span { display: block; font-size: 11.5px; margin-top: 4px; color: var(--text); }

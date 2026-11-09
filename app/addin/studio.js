@@ -232,7 +232,7 @@ function renderPanel() {
                     swatchRow(g.colors) + '<div class="rss-card-caption">' + esc(g.name) + '</div></button>';
             }).join('');
             themeBody += sub(SPARKLE + ' Copilot suggestions', '<div class="rss-grid">' + cards + '</div>' +
-                '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare these on my documents</button></div>' +
+                '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare them</button></div>' +
                 (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
                 'AI-generated. Check the preview before you apply. You can still change everything below.',
                 sumText(picked ? picked.name : copilot.suggestions.length + ' proposals'));
@@ -324,7 +324,7 @@ function renderPanel() {
     // 3 · Apply
     // Two tabs (the two configuration modes); the document picker above and the apply bar below apply to both.
     var tab = studio.tab || 'theme';
-    html += '<div class="rss-tabs" role="tablist">' +
+    html += suggestionBanner() + '<div class="rss-tabs" role="tablist">' +
         tabButton('theme', 'Theme', themeState()) +
         tabButton('header', 'Header & footer', headerState()) + '</div>';
     var tabKeys = tab === 'theme' ? themeKeys : headerKeys;
@@ -434,6 +434,7 @@ function wirePanel(panel) {
     on(panel, '[data-compare]', function () {
         if (!studio.data.copilot || !studio.data.copilot.suggestions || !studio.data.copilot.suggestions.length) return;
         gallery.compare = studio.data.copilot.suggestions.slice();
+        gallery.cmp = null;
         if (studio.view === 'gallery') renderGallery(); else setView('gallery');
     });
     on(panel, '[data-fonts]', function (el) { s.fonts = +el.getAttribute('data-fonts'); renderPanel(); requestPreview(); });
@@ -603,7 +604,7 @@ var GALLERY_MAX = 6;          // own selection
 var GALLERY_GROUP_MAX = 12;   // a document group
 // Typical customer-facing documents, preferred when the gallery is filled for the first time.
 var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
-var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '', compare: null };
+var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '', compare: null, cmp: null };
 var COMPARE_MAX_DOCS = 4;     // a comparison renders every suggestion on every document, so keep the grid small
 var GALLERY_TIMEOUT_MS = 120000;
 
@@ -620,7 +621,7 @@ function setView(view) {
     byId('rss-pages').hidden = view === 'gallery';
     hide('rss-error');
     if (view === 'gallery') { hide('rss-overlay'); refreshGallery(0); }
-    else { gallery.queue = []; gallery.jobs = {}; gallery.compare = null; stopGalleryPoll(); requestPreview(0); }
+    else { gallery.queue = []; gallery.jobs = {}; gallery.compare = null; gallery.cmp = null; stopGalleryPoll(); requestPreview(0); }
 }
 
 function docKey(l) { return l.reportId + '|' + l.name; }
@@ -760,33 +761,56 @@ function suggestionState(g) {
     return JSON.stringify(s);
 }
 
-// Suggestions in rows, documents in columns: one theme across several reports, so the differences show.
+// Two large previews side by side, each with its own Copilot theme, and the documents below to pick from.
+// Left and right can be any two suggestions; a click on a document shows it in both previews.
 function renderComparison(docs) {
-    var host = byId('rss-gallery'), suggestions = gallery.compare, cells = [];
-    var cols = docs.length ? ' repeat(' + docs.length + ', minmax(150px, 1fr))' : '';
-    var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
-        '<span class="rss-gal-note">One row per Copilot theme, one column per document. <button class="rss-link" data-cmp-exit>Back to my documents</button></span></div>' +
-        '<div class="rss-cmp" style="grid-template-columns: 200px' + cols + '">' +
-        '<div></div>' + docs.map(function (l) {
-            return '<div class="rss-cmp-head"><b>' + esc(l.reportName) + '</b><small>' + esc(l.caption || l.name) + '</small></div>';
+    var host = byId('rss-gallery'), list = gallery.compare, cmp = gallery.cmp, cells = [];
+    if (!cmp) cmp = gallery.cmp = { a: 0, b: list.length > 1 ? 1 : 0, doc: 0 };
+    if (cmp.doc >= docs.length) cmp.doc = 0;
+    var doc = docs[cmp.doc], styleA = suggestionState(list[cmp.a]), styleB = suggestionState(list[cmp.b]);
+    var chips = function (attr, current) {
+        return list.map(function (g, k) {
+            return '<button class="rss-chip' + (k === current ? ' on' : '') + '" ' + attr + '="' + k + '">' + esc(g.name) + '</button>';
         }).join('');
-    suggestions.forEach(function (g, k) {
-        var style = suggestionState(g);
-        html += '<div class="rss-cmp-label"><b>' + esc(g.name) + '</b><small>' + esc(g.reason) + '</small></div>';
-        docs.forEach(function (l, i) {
-            var index = 'c' + k + '-' + i;
-            html += '<div class="rss-gal-thumb rss-cmp-cell" id="rss-gal-' + index + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>';
-            cells.push({ index: index, doc: l, style: style });
-        });
-    });
-    host.innerHTML = html + '</div>';
-    host.querySelector('[data-cmp-exit]').addEventListener('click', function () { gallery.compare = null; renderGallery(); });
+    };
+    var side = function (id, g) {
+        return '<div class="rss-cmp-side"><div class="rss-gal-thumb rss-cmp-large" id="rss-gal-' + id + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>' +
+            '<b>' + esc(g.name) + '</b><small>' + esc(g.reason) + '</small></div>';
+    };
+    var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
+        '<span class="rss-gal-note"><button class="rss-link" data-cmp-exit>Back to my documents</button></span></div>' +
+        '<div class="rss-cmp-pick"><div><span>Left</span>' + chips('data-cmp-a', cmp.a) + '</div>' +
+        '<div><span>Right</span>' + chips('data-cmp-b', cmp.b) + '</div></div>' +
+        '<div class="rss-cmp-big">' + side('big-a', list[cmp.a]) + side('big-b', list[cmp.b]) + '</div>' +
+        '<div class="rss-cmp-docs-head">Show on another document</div>' +
+        '<div class="rss-cmp-docs">' + docs.map(function (l, i) {
+            return '<button class="rss-cmp-doc' + (i === cmp.doc ? ' on' : '') + '" data-cmp-doc="' + i + '">' +
+                '<div class="rss-gal-thumb" id="rss-gal-g-' + i + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>' +
+                '<span>' + esc(l.reportName) + '</span></button>';
+        }).join('') + '</div>';
+    host.innerHTML = html;
+
+    host.querySelector('[data-cmp-exit]').addEventListener('click', function () { gallery.compare = null; gallery.cmp = null; renderGallery(); });
+    host.querySelectorAll('[data-cmp-a]').forEach(function (b) { b.addEventListener('click', function () { cmp.a = +b.getAttribute('data-cmp-a'); renderGallery(); }); });
+    host.querySelectorAll('[data-cmp-b]').forEach(function (b) { b.addEventListener('click', function () { cmp.b = +b.getAttribute('data-cmp-b'); renderGallery(); }); });
+    host.querySelectorAll('[data-cmp-doc]').forEach(function (b) { b.addEventListener('click', function () { cmp.doc = +b.getAttribute('data-cmp-doc'); renderGallery(); }); });
+
+    cells.push({ index: 'big-a', doc: doc, style: styleA }, { index: 'big-b', doc: doc, style: styleB });
+    docs.forEach(function (l, i) { cells.push({ index: 'g-' + i, doc: l, style: styleA }); });
     cells.forEach(function (c) {
         var key = docKey(c.doc) + '|' + c.style;
         var hit = gallery.cache[key];
         if (hit) showGalleryResult(c.index, hit); else gallery.queue.push({ index: c.index, doc: c.doc, key: key, state: c.style });
     });
     sendGalleryBatch();
+}
+
+// A banner at the top of the designer when Copilot has proposals, so they are easy to find.
+function suggestionBanner() {
+    var list = studio.data.copilot && studio.data.copilot.suggestions;
+    if (!list || !list.length) return '';
+    return '<div class="rss-cmp-banner"><span>Copilot suggested ' + list.length + ' themes.</span>' +
+        '<button class="rss-primary" data-compare="1">Compare them</button></div>';
 }
 
 // Everything that is not cached goes to one background session; finished pages are picked up by polling.

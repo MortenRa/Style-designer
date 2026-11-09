@@ -66,6 +66,8 @@ table 50100 "Report Style Config"
         // With Apply To = group: customer, vendor or internal (see "Report Style Doc Groups").
         field(28; "Apply Group"; Text[20]) { Caption = 'Apply to group'; }
         field(29; Composition; Enum "Report Style Composition") { Caption = 'Composition (draft)'; }
+        // The last Copilot proposals (JSON), kept so they are still there when the designer is opened again.
+        field(30; "Copilot Suggestions"; Blob) { Caption = 'Copilot suggestions (last)'; }
     }
 
     keys
