@@ -887,8 +887,13 @@ function renderComparison(docs) {
             return '<button class="rss-chip' + (k === current ? ' on' : '') + '" ' + attr + '="' + k + '">' + esc(g.name) + '</button>';
         }).join('');
     };
+    // Each big preview has arrows to step through the themes (the chips above do the same).
     var side = function (id, g) {
-        return '<div class="rss-cmp-side"><div class="rss-gal-thumb rss-cmp-large" id="rss-gal-' + id + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>' +
+        var key = id === 'big-a' ? 'a' : 'b';
+        return '<div class="rss-cmp-side"><div class="rss-cmp-stage">' +
+            '<button class="rss-car-nav" data-cmp-step="' + key + '" data-delta="-1" aria-label="Previous theme">‹</button>' +
+            '<div class="rss-gal-thumb rss-cmp-large" id="rss-gal-' + id + '"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>' +
+            '<button class="rss-car-nav" data-cmp-step="' + key + '" data-delta="1" aria-label="Next theme">›</button></div>' +
             '<b>' + esc(g.name) + '</b><small>' + esc(g.reason) + '</small></div>';
     };
     var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
@@ -908,6 +913,13 @@ function renderComparison(docs) {
     host.querySelectorAll('[data-cmp-a]').forEach(function (b) { b.addEventListener('click', function () { cmp.a = +b.getAttribute('data-cmp-a'); renderGallery(); }); });
     host.querySelectorAll('[data-cmp-b]').forEach(function (b) { b.addEventListener('click', function () { cmp.b = +b.getAttribute('data-cmp-b'); renderGallery(); }); });
     host.querySelectorAll('[data-cmp-doc]').forEach(function (b) { b.addEventListener('click', function () { cmp.doc = +b.getAttribute('data-cmp-doc'); renderGallery(); }); });
+    host.querySelectorAll('[data-cmp-step]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var key = b.getAttribute('data-cmp-step'), n = list.length;
+            cmp[key] = (cmp[key] + (+b.getAttribute('data-delta')) + n) % n;
+            renderGallery();
+        });
+    });
 
     cells.push({ index: 'big-a', doc: doc, style: styleA }, { index: 'big-b', doc: doc, style: styleB });
     docs.forEach(function (l, i) { cells.push({ index: 'g-' + i, doc: l, style: styleA }); });
