@@ -676,7 +676,8 @@ function setDesignView(index) {
         if (studio.view === 'gallery') renderGallery(); else setView('gallery');
     } else {
         gallery.compare = null;
-        if (studio.view === 'gallery') setView('single'); else renderPanel();
+        // The preview is drawn at the width it had when it was requested, so draw it again in the new layout.
+        if (studio.view === 'gallery') setView('single'); else { renderPanel(); requestPreview(0); }
     }
 }
 
