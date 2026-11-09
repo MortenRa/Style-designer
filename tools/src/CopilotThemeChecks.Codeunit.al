@@ -53,6 +53,14 @@ codeunit 50124 "Copilot Theme Checks"
         Check(Text.Contains('"Sitka"') and not Text.Contains('"KeepBase"'), 'font choices without KeepBase');
         Check(Text.Contains('"WarmPaper"') and not Text.Contains('"Custom"'), 'page colours without KeepBase and Custom');
         Check(ProposeThemes.TableStyleChoices().Count() = 4, 'four table styles');
+        ProposeThemes.SetCount(6);
+        Prompt := ProposeThemes.GetPrompt();
+        Prompt.WriteTo(Text);
+        Check(Text.Contains('"minItems":6') and Text.Contains('"maxItems":6'), 'six proposals in the tool definition');
+        ProposeThemes.SetCount(9);
+        Prompt := ProposeThemes.GetPrompt();
+        Prompt.WriteTo(Text);
+        Check(Text.Contains('"maxItems":3'), 'a count outside 1 to 6 falls back to three');
         BuildsTheRequest();
     end;
 

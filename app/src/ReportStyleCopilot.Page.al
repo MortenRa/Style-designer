@@ -1,6 +1,6 @@
 namespace Abakion.ReportStyleDesigner;
 
-/// Copilot dialog of the Report Style Designer: describe a look and Copilot proposes three checked themes.
+/// Copilot dialog of the Report Style Designer: describe a look and Copilot proposes 1 to 6 checked themes.
 /// The proposals open in the designer as suggestion cards with the first one in the live preview, so the user
 /// compares them on the real report; nothing is applied until the user applies it from the designer.
 page 50103 "Report Style Copilot"
@@ -27,6 +27,12 @@ page 50103 "Report Style Copilot"
                 Caption = 'Background';
                 OptionCaption = 'White,Soft tint of the theme colour,Let Copilot choose';
                 ToolTip = 'The page colour behind the report. It prints on every page, so a tint is always kept very light.';
+            }
+            field(ProposalCountChoice; ProposalCountChoice)
+            {
+                Caption = 'Number of themes';
+                OptionCaption = '1,2,3,4,5,6';
+                ToolTip = 'How many themes Copilot suggests. Each one is shown in the designer, where you can preview it on your reports before you apply it.';
             }
         }
         area(Prompt)
@@ -87,7 +93,7 @@ page 50103 "Report Style Copilot"
             systemaction(Generate)
             {
                 Caption = 'Generate';
-                ToolTip = 'Let Copilot suggest three themes and show them in the designer.';
+                ToolTip = 'Let Copilot suggest the chosen number of themes and show them in the designer.';
                 trigger OnAction()
                 begin
                     case BackgroundChoice of
@@ -98,6 +104,7 @@ page 50103 "Report Style Copilot"
                         else
                             ReportStyleCopilot.SetBackground(0);
                     end;
+                    ReportStyleCopilot.SetProposalCount(ProposalCountChoice.AsInteger() + 1);
                     ReportStyleCopilot.Generate(UserPrompt, ReportName, ColoursForCopilot(), Proposals);
                     // The designer is the place to compare them: real preview, real swatches.
                     CurrPage.Close();
@@ -105,6 +112,11 @@ page 50103 "Report Style Copilot"
             }
         }
     }
+
+    trigger OnOpenPage()
+    begin
+        ProposalCountChoice := ProposalCountChoice::Three;
+    end;
 
     var
         Proposals: Record "Report Style Proposal";
@@ -114,6 +126,7 @@ page 50103 "Report Style Copilot"
         Colours: Text;
         ColourChoice: Option BrandLogo,CopilotChooses,Blues,Greens,WarmTones,NeutralGreys;
         BackgroundChoice: Option White,ThemeTint,CopilotChooses;
+        ProposalCountChoice: Option One,Two,Three,Four,Five,Six;
         BrandPromptTxt: Label 'Use our brand colours and logo colours. Professional and clear.';
         FormalPromptTxt: Label 'Formal and classic, suitable for invoices and statements to customers.';
         CalmPromptTxt: Label 'Calm and modern, light and airy, not too colourful.';

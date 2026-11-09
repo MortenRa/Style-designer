@@ -2,7 +2,7 @@ namespace Abakion.ReportStyleDesigner;
 
 using System.AI;
 
-/// The one tool Copilot may call: three theme proposals as structured arguments.
+/// The one tool Copilot may call: theme proposals as structured arguments (1 to 6, default 3).
 /// The arguments are read by "Report Style Copilot"; nothing is executed here.
 codeunit 50120 "Report Style Propose Themes" implements "AOAI Function"
 {
@@ -10,6 +10,15 @@ codeunit 50120 "Report Style Propose Themes" implements "AOAI Function"
 
     var
         FunctionNameTok: Label 'propose_themes', Locked = true;
+        ProposalCount: Integer;
+
+    /// How many proposals Copilot must return; values outside 1 to 6 are set to the default of 3.
+    procedure SetCount(NewCount: Integer)
+    begin
+        if (NewCount < 1) or (NewCount > 6) then
+            NewCount := 3;
+        ProposalCount := NewCount;
+    end;
 
     procedure GetName(): Text
     begin
@@ -42,9 +51,11 @@ codeunit 50120 "Report Style Propose Themes" implements "AOAI Function"
         Theme.Add('required', Required);
 
         Themes.Add('type', 'array');
-        Themes.Add('description', 'Exactly three clearly different proposals.');
-        Themes.Add('minItems', 3);
-        Themes.Add('maxItems', 3);
+        if ProposalCount < 1 then
+            ProposalCount := 3;
+        Themes.Add('description', StrSubstNo('Exactly %1 clearly different proposals.', ProposalCount));
+        Themes.Add('minItems', ProposalCount);
+        Themes.Add('maxItems', ProposalCount);
         Themes.Add('items', Theme);
         Properties.Add('themes', Themes);
 
@@ -54,7 +65,7 @@ codeunit 50120 "Report Style Propose Themes" implements "AOAI Function"
         Parameters.Add('required', Required);
 
         Function.Add('name', FunctionNameTok);
-        Function.Add('description', 'Propose three visual themes for printed Business Central reports.');
+        Function.Add('description', StrSubstNo('Propose %1 visual themes for printed Business Central reports.', ProposalCount));
         Function.Add('parameters', Parameters);
         Prompt.Add('type', 'function');
         Prompt.Add('function', Function);

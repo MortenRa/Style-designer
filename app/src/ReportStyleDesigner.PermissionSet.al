@@ -21,6 +21,7 @@ permissionset 50100 "REPORT STYLE DESIGN"
         tabledata "Tenant Report Layout Selection" = RIMD,
         table "Report Style Config" = X,
         page "Report Style Designer" = X,
+        page "Report Style Start" = X,
         page "Report Style Body Layouts" = X,
         codeunit "Report Theme Generator" = X,
         codeunit "Report Header Footer Generator" = X,
