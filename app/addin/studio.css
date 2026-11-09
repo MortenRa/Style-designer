@@ -328,3 +328,9 @@
 .d-simple .rss-sub:has(> .rss-fold-head[data-fold="Table style"]),
 .d-simple .rss-sub:has(> .rss-fold-head[data-fold="Save header/footer as"]),
 .d-simple .rss-sub:has(> .rss-fold-head[data-fold="Extras"]) { display: none; }
+
+/* Full views show every section open; simple views hide the rarely used ones. */
+.d-full .rss-fold.collapsed .rss-fold-body { display: block; }
+.d-full .rss-fold.collapsed .rss-chevron { transform: none; }
+.d-simple .rss-sub:has(> .rss-fold-head[data-fold="Start from"]),
+.d-simple .rss-sub:has(> .rss-fold-head[data-fold="Page colour"]) { display: none; }
