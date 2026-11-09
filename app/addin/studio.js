@@ -62,10 +62,28 @@ function StudioInit(root) {
     root.querySelector('#rss-design').addEventListener('change', function (e) { setDesignView(+e.target.value); });
     // Delegated, because the panel is redrawn after every change.
     root.addEventListener('click', function (e) {
-        if (e.target.closest && e.target.closest('[data-clear-suggestions]')) {
+        if (!e.target.closest) return;
+        if (e.target.closest('[data-clear-suggestions]')) {
             Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('ClearSuggestionsRequested', []);
+            return;
         }
+        var car = e.target.closest('.rss-car');
+        if (!car) return;
+        var track = car.querySelector('.rss-carousel');
+        var last = track.children.length - 1;
+        var current = carouselIndex(track);
+        var target = current;
+        if (e.target.closest('[data-car-prev]')) target = current - 1;
+        else if (e.target.closest('[data-car-next]')) target = current + 1;
+        else if (e.target.closest('[data-car-dot]')) target = +e.target.closest('[data-car-dot]').getAttribute('data-car-dot');
+        else return;
+        target = Math.max(0, Math.min(last, target));
+        track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
     });
+    // Scrolling (by hand or by the arrows) moves the dots.
+    root.addEventListener('scroll', function (e) {
+        if (e.target.classList && e.target.classList.contains('rss-carousel')) updateCarouselDots(e.target.closest('.rss-car'));
+    }, true);
     root.querySelectorAll('[data-view]').forEach(function (b) {
         b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
     });
@@ -262,8 +280,7 @@ function renderPanel() {
                 return '<button class="rss-card' + (on ? ' on' : '') + '" data-suggestion="' + i + '" title="' + esc(g.reason) + '">' +
                     swatchRow(g.colors) + '<div class="rss-card-caption">' + esc(g.name) + '</div></button>';
             }).join('');
-            copilotBody = sub(SPARKLE + ' Copilot suggestions', '<div class="rss-carousel" role="list">' + cards + '</div>' +
-                '<div class="rss-carousel-hint">Swipe or scroll to see all ' + copilot.suggestions.length + ' themes</div>' +
+            copilotBody = sub(SPARKLE + ' Copilot suggestions', carouselHtml(cards, copilot.suggestions.length) +
                 '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare them</button> · <button class="rss-link" data-clear-suggestions="1">Clear suggestions</button></div>' +
                 (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
                 'AI-generated. Check the preview before you apply. You can still change everything below.',
@@ -425,6 +442,31 @@ function headerState() {
     if (m === 'default') return { text: 'Default', changed: true };
     return { text: 'Keep current', changed: false };
 }
+// The Copilot carousel: one suggestion at a time, arrows on both sides and a dot per suggestion.
+function carouselHtml(cards, count) {
+    var dots = '';
+    for (var i = 0; i < count; i++) {
+        dots += '<button class="rss-car-dot' + (i === 0 ? ' on' : '') + '" data-car-dot="' + i + '" aria-label="Theme ' + (i + 1) + ' of ' + count + '"></button>';
+    }
+    return '<div class="rss-car">' +
+        '<button class="rss-car-nav" data-car-prev aria-label="Previous theme">‹</button>' +
+        '<div class="rss-carousel" role="list">' + cards + '</div>' +
+        '<button class="rss-car-nav" data-car-next aria-label="Next theme">›</button></div>' +
+        '<div class="rss-car-dots">' + dots + '</div>';
+}
+
+function carouselIndex(track) {
+    var width = track.clientWidth || 1;
+    return Math.round(track.scrollLeft / width);
+}
+
+function updateCarouselDots(car) {
+    if (!car) return;
+    var track = car.querySelector('.rss-carousel');
+    var index = carouselIndex(track);
+    car.parentNode.querySelectorAll('.rss-car-dot').forEach(function (dot, i) { dot.classList.toggle('on', i === index); });
+}
+
 // Click handlers for the Copilot suggestions, wherever they are shown (theme tab or side panel).
 function bindSuggestions(root) {
     var s = studio.state;

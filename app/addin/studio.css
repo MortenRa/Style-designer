@@ -299,8 +299,16 @@
 .rss-copilot { flex: 0 0 300px; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .rss-copilot[hidden] { display: none; }
 .rss-copilot .rss-scroll { overflow-y: auto; padding: 8px 14px 24px; }
-.rss-copilot .rss-carousel { flex-direction: column; overflow: visible; }
-.rss-copilot .rss-carousel > * { flex: 0 0 auto; width: 100%; }
+/* Copilot carousel: one card at a time, arrows on the sides and dots below. */
+.rss-car { display: flex; align-items: center; gap: 6px; }
+.rss-car .rss-carousel { flex: 1 1 auto; min-width: 0; display: flex; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+.rss-car .rss-carousel::-webkit-scrollbar { display: none; }
+.rss-car .rss-carousel > * { flex: 0 0 100%; width: 100%; scroll-snap-align: start; min-width: 0; box-sizing: border-box; }
+.rss-car-nav { flex: 0 0 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; }
+.rss-car-nav:hover { border-color: var(--accent); color: var(--accent); }
+.rss-car-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.rss-car-dot { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: var(--control); opacity: .35; cursor: pointer; }
+.rss-car-dot.on { opacity: 1; background: var(--accent); }
 
 .rss.v1 .rss-preview, .rss.v4 .rss-preview { grid-area: preview; }
 .rss.v1, .rss.v4 { display: grid; grid-template-columns: 360px minmax(0, 1fr); grid-template-areas: "panel preview"; }
