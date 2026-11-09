@@ -156,10 +156,11 @@ page 50102 "Report Style Designer"
             action(DraftThemeAction)
             {
                 ApplicationArea = All;
+                // Hidden: the designer has one Copilot entry, "Draft with Copilot", at the top right of the preview.
                 Caption = 'Draft a theme';
                 ToolTip = 'Describe the look you want and get three themes to preview. Nothing is applied until you choose Apply.';
                 Image = Sparkle;
-                Visible = CopilotAvailable;
+                Visible = false;
 
                 trigger OnAction()
                 begin

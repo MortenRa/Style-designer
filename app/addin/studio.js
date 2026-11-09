@@ -31,7 +31,7 @@ function currentDesignView() { return DESIGN_VIEWS[studio.design === undefined ?
 function StudioInit(root) {
     studio.root = root;
     var designOptions = DESIGN_VIEWS.map(function (v, i) {
-        return '<option value="' + i + '"' + (i === DEFAULT_DESIGN ? ' selected' : '') + '>' + (i + 1) + '. ' + esc(v.name) + '</option>';
+        return '<option value="' + i + '"' + (i === DEFAULT_DESIGN ? ' selected' : '') + '>' + esc(v.name) + '</option>';
     }).join('');
     root.innerHTML =
         '<div class="rss">' +
@@ -281,7 +281,6 @@ function renderPanel() {
                     swatchRow(g.colors) + '<div class="rss-card-caption">' + esc(g.name) + '</div></button>';
             }).join('');
             copilotBody = sub(SPARKLE + ' Copilot suggestions', carouselHtml(cards, copilot.suggestions.length) +
-                '<div class="rss-cmp-start"><button class="rss-link" data-compare="1">Compare them</button> · <button class="rss-link" data-clear-suggestions="1">Clear suggestions</button></div>' +
                 (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
                 'AI-generated. Check the preview before you apply. You can still change everything below.',
                 sumText(picked ? picked.name : copilot.suggestions.length + ' proposals'));
@@ -409,10 +408,10 @@ function renderPanel() {
     studio.tabChanged = false;
     if (currentDesignView().split) {
         // Theme on the left, header/footer and Apply on the right, preview in the middle.
-        panel.innerHTML = '<div class="rss-col rss-col-theme"><div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + themeBody + '</div></div>' +
+        panel.innerHTML = '<div class="rss-col rss-col-theme"><div class="rss-scroll" id="rss-scroll">' + statusLine() + pickerHtml + suggestionBanner() + themeBody + '</div></div>' +
             '<div class="rss-col rss-col-header"><div class="rss-scroll rss-scroll-h">' + headerBody + '</div>' + applyBar + '</div>';
     } else {
-        panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + pickerHtml + suggestionBanner() + html + '</div>' + applyBar;
+        panel.innerHTML = '<div class="rss-scroll" id="rss-scroll">' + statusLine() + pickerHtml + suggestionBanner() + html + '</div>' + applyBar;
     }
     byId('rss-scroll').scrollTop = scrollTop;
     // The suggestions in the side panel (views where Copilot sits beside the preview).
@@ -948,7 +947,7 @@ function suggestionBanner() {
     var list = studio.data.copilot && studio.data.copilot.suggestions;
     if (!list || !list.length) return '';
     return '<div class="rss-cmp-banner"><span>Copilot suggested ' + list.length + ' themes.</span>' +
-        '<button class="rss-primary" data-compare="1">Compare them</button>' +
+        '<button class="rss-secondary" data-compare="1">Compare them</button>' +
         '<button class="rss-link" data-clear-suggestions="1" title="Removes the Copilot suggestions for everyone">Clear</button></div>';
 }
 
@@ -1293,4 +1292,11 @@ function show(id) { byId(id).classList.add('visible'); }
 function hide(id) { var el = byId(id); if (id === 'rss-error') { el.hidden = true; } else { el.classList.remove('visible'); } }
 function esc(text) {
     return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// One line at the top of the panel: which theme the preview shows. Nothing is changed until Apply.
+function statusLine() {
+    var s = studio.state;
+    var name = s.themeMode === 'custom' ? (s.themeName || 'Custom theme') : (s.baseTheme || 'Base theme');
+    return '<div class="rss-status">Preview: <b>' + esc(name) + '</b> · not applied yet</div>';
 }

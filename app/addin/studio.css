@@ -370,3 +370,6 @@
 .rss-copilot .rss-car-nav, .rss-copilot .rss-car-dots { display: none; }
 .rss-copilot .rss-carousel { flex-direction: column; overflow: visible; scroll-snap-type: none; gap: 8px; }
 .rss-copilot .rss-carousel > * { flex: 0 0 auto; width: 100%; }
+
+.rss-status { font-size: 12px; color: var(--muted); padding: 6px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.rss-status b { color: var(--text); font-weight: 600; }
