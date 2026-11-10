@@ -1,10 +1,12 @@
 namespace Abakion.ReportStyleDesigner;
 
-/// Shows one page of a report as a picture on the Report style page, taller than the Web Page Viewer allows.
-/// Only an image box: the page is rendered and turned into a PNG on the server.
+/// Shows page 1 of a report on the Report style page. The PDF is drawn with pdf.js, like the designer,
+/// so the text stays sharp at every size (a picture from the server is only 72 dpi).
 controladdin "Report Style Page Preview"
 {
-    Scripts = 'addin/pagepreview.js';
+    Scripts =
+        'https://cdn-bc.dynamics.com/common/js/pdfjs-4.10.38/pdf.min.mjs',
+        'addin/pagepreview.js';
     StartupScript = 'addin/pagepreview-startup.js';
     StyleSheets = 'addin/pagepreview.css';
 
@@ -17,6 +19,6 @@ controladdin "Report Style Page Preview"
 
     event Ready();
 
-    procedure ShowImage(PngBase64: Text; Tooltip: Text);
+    procedure ShowPdf(PdfBase64: Text; Tooltip: Text);
     procedure ShowMessage(Message: Text);
 }

@@ -1,6 +1,6 @@
 html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; background: transparent; }
-.pp { height: 100%; box-sizing: border-box; padding: 4px; display: flex; justify-content: center; align-items: flex-start; }
-.pp img { max-width: 100%; max-height: 100%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); cursor: zoom-in; }
-.pp.wide { display: block; overflow: auto; }
-.pp.wide img { display: block; width: 100%; max-height: none; cursor: zoom-out; }
+.pp { height: 100%; box-sizing: border-box; padding: 4px; overflow: auto; }
+.pp canvas { display: block; margin: 0 auto; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
+.pp.page canvas, .pp.width canvas { cursor: zoom-in; }
+.pp.large canvas { cursor: zoom-out; margin: 0; }
 .pp-msg { font: 13px "Segoe UI", sans-serif; color: #605e5c; padding: 24px 4px; }

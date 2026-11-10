@@ -1,6 +1,5 @@
 namespace Abakion.ReportStyleDesigner;
 
-using System.IO;
 using System.Text;
 using System.Utilities;
 
@@ -220,8 +219,7 @@ page 50105 "Report Style Start"
         PreviewStatusText: Text;
         ViewerReady: Boolean;
         StartTxt: Label 'Change a choice, or choose Update preview, to see the first page of the document here.';
-        NoPictureErr: Label 'The preview could not be turned into a picture.';
-        ZoomTipTxt: Label 'Click to switch between the whole page and the full width.';
+        ZoomTipTxt: Label 'Click to zoom: whole page, full width, larger.';
 
     trigger OnOpenPage()
     var
@@ -246,11 +244,8 @@ page 50105 "Report Style Start"
     var
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
         Runner: Codeunit "Report Style Designer Runner";
-        PdfDocument: Codeunit "PDF Document";
         Base64Convert: Codeunit "Base64 Convert";
         Pdf: Codeunit "Temp Blob";
-        Image: Codeunit "Temp Blob";
-        ImageStream: InStream;
     begin
         if not ViewerReady then
             exit;
@@ -260,15 +255,8 @@ page 50105 "Report Style Start"
             exit;
         end;
         Runner.GetPdf(Pdf);
-        Image.CreateInStream(ImageStream);
-        if PdfDocument.Load(Pdf.CreateInStream()) then
-            if PdfDocument.ConvertPdfToImage(ImageStream, Enum::"Image Format"::Png, 1) then begin
-                PreviewStatusText := StrSubstNo(PreviewCaptionTxt, DesignerMgt.GetReportCaption(Rec));
-                ShowImage(Base64Convert.ToBase64(ImageStream));
-                exit;
-            end;
-        PreviewStatusText := NoPictureErr;
-        ShowMessage(PreviewStatusText);
+        PreviewStatusText := StrSubstNo(PreviewCaptionTxt, DesignerMgt.GetReportCaption(Rec));
+        CurrPage.PreviewViewer.ShowPdf(Base64Convert.ToBase64(Pdf.CreateInStream()), ZoomTipTxt);
     end;
 
     local procedure ShowMessage(Message: Text)
@@ -277,11 +265,6 @@ page 50105 "Report Style Start"
             CurrPage.PreviewViewer.ShowMessage(Message);
     end;
 
-    local procedure ShowImage(PngBase64: Text)
-    begin
-        if ViewerReady then
-            CurrPage.PreviewViewer.ShowImage(PngBase64, ZoomTipTxt);
-    end;
 
     // A Card page fills its non-source fields here, not in OnAfterGetCurrRecord (that is for list pages).
     trigger OnAfterGetRecord()
