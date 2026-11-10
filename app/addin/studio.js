@@ -294,6 +294,20 @@ function renderPanel() {
                 sumText(picked ? picked.name : copilot.suggestions.length + ' proposals'));
             if (currentDesignView().copilot !== 'aside') themeBody += copilotBody;
         }
+        // The themes that already exist, as they are: see one in the preview, or compare it with others.
+        var all = candidates(), first = all.length - all.filter(function (c) { return c.kind === 'theme'; }).length;
+        if (all.length > first) {
+            var pickedTheme = null;
+            var themeCards = all.slice(first).map(function (c, k) {
+                var on = candidateMatches(c, s);
+                if (on) pickedTheme = c;
+                return '<button class="rss-card' + (on ? ' on' : '') + '" data-suggestion="' + (first + k) + '" title="' + esc(c.reason) + '">' +
+                    swatchRow(c.colors) + '<div class="rss-card-caption">' + esc(c.name) + '</div></button>';
+            }).join('');
+            themeBody += sub('Existing themes', carouselHtml(themeCards, all.length - first),
+                'Themes already in Business Central, shown as they are. Applying one saves it as a copy you can change.',
+                sumText(pickedTheme ? pickedTheme.name : (all.length - first) + ' themes'));
+        }
         var base = d.themes.filter(function (t) { return t.name === s.baseTheme; })[0];
         // A list of the themes in the tenant (like the header/footer designs), so it stays usable with many themes.
         themeBody += sub('Start from',
@@ -441,46 +455,81 @@ function renderPanel() {
     renderStageCarousel();
 }
 
-// The suggestion that matches the current choices, or -1.
-function pickedSuggestion() {
-    var c = studio.data && studio.data.copilot, s = studio.state;
-    if (!c || !c.suggestions || s.themeMode !== 'custom' || s.palette !== c.customPalette) return -1;
-    for (var i = 0; i < c.suggestions.length; i++) {
-        var g = c.suggestions[i];
-        if (sameColors(g.colors, s.customColors) && g.fonts === s.fonts && g.tableStyle === s.tableStyle && g.pageColor === s.pageColor) return i;
+// Themes to try: the Copilot suggestions first, then the themes that already exist in Business Central.
+// An existing theme is "start from it and keep everything", so it previews exactly as it is.
+function candidates() {
+    var d = studio.data || {}, list = [];
+    ((d.copilot && d.copilot.suggestions) || []).forEach(function (g) { list.push(g); });
+    (d.themes || []).forEach(function (t) {
+        if (!t.colors || t.colors.length !== 12) return;
+        list.push({
+            kind: 'theme', baseTheme: t.name, name: t.caption || t.name, colors: t.colors,
+            reason: (t.summary && t.summary !== t.name && t.summary !== t.caption) ? t.summary : 'A theme that already exists in Business Central, shown as it is.',
+            palette: KEEP_BASE, fonts: KEEP_BASE, tableStyle: KEEP_BASE, pageColor: KEEP_BASE
+        });
+    });
+    return list;
+}
+var KEEP_BASE = 0;
+
+// Puts a candidate into a style, the same way for a click, the carousel and Compare.
+function applyCandidate(s, c) {
+    s.themeMode = 'custom';
+    if (c.kind === 'theme') {
+        s.baseTheme = c.baseTheme;
+        s.palette = KEEP_BASE;
+        s.fonts = KEEP_BASE;
+        s.tableStyle = KEEP_BASE;
+        s.pageColor = KEEP_BASE;
+        // Saving makes a copy; a theme cannot be saved under the name of the theme it starts from.
+        s.themeName = c.name + ' (copy)';
+        return;
     }
+    s.palette = studio.data.copilot.customPalette;
+    s.customColors = c.colors.slice();
+    s.fonts = c.fonts;
+    s.tableStyle = c.tableStyle;
+    s.pageColor = c.pageColor;
+    if (c.customPage) s.customPage = c.customPage;
+    s.themeName = c.name;
+}
+
+function candidateMatches(c, s) {
+    if (s.themeMode !== 'custom') return false;
+    if (c.kind === 'theme')
+        return s.baseTheme === c.baseTheme && s.palette === KEEP_BASE && s.fonts === KEEP_BASE && s.tableStyle === KEEP_BASE && s.pageColor === KEEP_BASE;
+    return s.palette === studio.data.copilot.customPalette && sameColors(c.colors, s.customColors) &&
+        c.fonts === s.fonts && c.tableStyle === s.tableStyle && c.pageColor === s.pageColor;
+}
+
+// The candidate that matches the current choices, or -1.
+function pickedSuggestion() {
+    var list = candidates(), s = studio.state;
+    for (var i = 0; i < list.length; i++) if (candidateMatches(list[i], s)) return i;
     return -1;
 }
 
 function useSuggestion(i) {
-    var s = studio.state, g = studio.data.copilot.suggestions[i];
-    s.themeMode = 'custom';
-    s.palette = studio.data.copilot.customPalette;
-    s.customColors = g.colors.slice();
-    s.fonts = g.fonts;
-    s.tableStyle = g.tableStyle;
-    s.pageColor = g.pageColor;
-    if (g.customPage) s.customPage = g.customPage;
-    s.themeName = g.name;
+    applyCandidate(studio.state, candidates()[i]);
     renderPanel();
     requestPreview(0);
 }
 
-// Over the single preview: the suggestions as a carousel, so they can be compared on the page itself.
+// Over the single preview: the themes to try as a carousel, so they can be compared on the page itself.
 function renderStageCarousel() {
     var bar = byId('rss-stage-car');
     if (!bar) return;
-    var list = studio.data && studio.data.copilot && studio.data.copilot.suggestions;
-    var show = studio.view !== 'gallery' && !!list && list.length > 0;
+    var list = studio.data ? candidates() : [];
+    var show = studio.view !== 'gallery' && list.length > 0;
     bar.hidden = !show;
     if (!show) { bar.innerHTML = ''; return; }
     var i = pickedSuggestion();
     var dots = list.map(function (g, k) {
-        return '<button class="rss-car-dot' + (k === i ? ' on' : '') + '" data-stage-pick="' + k + '" title="' + esc(g.name) + '" aria-label="' + esc(g.name) + '"></button>';
+        return '<button class="rss-car-dot' + (g.kind === 'theme' ? ' theme' : '') + (k === i ? ' on' : '') + '" data-stage-pick="' + k + '" title="' + esc(g.name) + '" aria-label="' + esc(g.name) + '"></button>';
     }).join('');
     var label = i >= 0
-        ? swatchRow(list[i].colors) + '<b>' + esc(list[i].name) + '</b><span>' + (i + 1) + ' of ' + list.length + '</span>'
-        : SPARKLE + '<b>Copilot suggestions</b><span>' + list.length + ' themes, use the arrows to try them</span>';
+        ? swatchRow(list[i].colors) + '<b>' + esc(list[i].name) + '</b><span>' + (list[i].kind === 'theme' ? 'Existing theme · ' : 'Copilot · ') + (i + 1) + ' of ' + list.length + '</span>'
+        : SPARKLE + '<b>Themes to try</b><span>' + list.length + ' themes, use the arrows to try them</span>';
     bar.innerHTML = '<button class="rss-car-nav" data-stage-step="-1" aria-label="Previous suggestion">‹</button>' +
         '<div class="rss-stage-car-mid"><div class="rss-stage-car-name">' + label + '</div><div class="rss-car-dots">' + dots + '</div></div>' +
         '<button class="rss-car-nav" data-stage-step="1" aria-label="Next suggestion">›</button>';
@@ -534,8 +583,8 @@ function bindSuggestions(root) {
     var s = studio.state;
     on(root, '[data-suggestion]', function (el) { useSuggestion(+el.getAttribute('data-suggestion')); });
     on(root, '[data-compare]', function () {
-        if (!studio.data.copilot || !studio.data.copilot.suggestions || !studio.data.copilot.suggestions.length) return;
-        gallery.compare = studio.data.copilot.suggestions.slice();
+        if (candidates().length < 2) return;
+        gallery.compare = candidates();
         gallery.cmp = null;
         if (studio.view === 'gallery') renderGallery(); else setView('gallery');
     });
@@ -762,8 +811,8 @@ function setDesignView(index) {
     root.className = 'rss ' + v.cls + ' d-' + v.density;
     if (!studio.data) return;
     if (v.compare || v.gallery) {
-        var suggestions = studio.data.copilot && studio.data.copilot.suggestions;
-        gallery.compare = (v.compare && suggestions && suggestions.length) ? suggestions.slice() : null;
+        var suggestions = candidates();
+        gallery.compare = (v.compare && suggestions.length > 1) ? suggestions : null;
         gallery.cmp = null;
         if (studio.view === 'gallery') renderGallery(); else setView('gallery');
     } else {
@@ -917,13 +966,7 @@ function renderGallery() {
 // The designer's style with one Copilot suggestion applied, the same way a click on the suggestion applies it.
 function suggestionState(g) {
     var s = JSON.parse(JSON.stringify(studio.state));
-    s.palette = studio.data.copilot.customPalette;
-    s.customColors = g.colors.slice();
-    s.fonts = g.fonts;
-    s.tableStyle = g.tableStyle;
-    s.pageColor = g.pageColor;
-    if (g.customPage) s.customPage = g.customPage;
-    s.themeName = g.name;
+    applyCandidate(s, g);
     return JSON.stringify(s);
 }
 
@@ -998,10 +1041,14 @@ function renderComparison(docs) {
 // A banner at the top of the designer when Copilot has proposals, so they are easy to find.
 function suggestionBanner() {
     var list = studio.data.copilot && studio.data.copilot.suggestions;
-    if (!list || !list.length) return '';
-    return '<div class="rss-cmp-banner"><span>Copilot suggested ' + list.length + ' themes.</span>' +
+    var all = candidates();
+    if (all.length < 2) return '';
+    var text = list && list.length
+        ? 'Copilot suggested ' + list.length + ' themes; ' + (all.length - list.length) + ' more exist.'
+        : all.length + ' themes exist in Business Central.';
+    return '<div class="rss-cmp-banner"><span>' + text + '</span>' +
         '<button class="rss-secondary" data-compare="1">Compare them</button>' +
-        '<button class="rss-link" data-clear-suggestions="1" title="Removes the Copilot suggestions for everyone">Clear</button></div>';
+        (list && list.length ? '<button class="rss-link" data-clear-suggestions="1" title="Removes the Copilot suggestions for everyone">Clear</button>' : '') + '</div>';
 }
 
 // Everything that is not cached goes to one background session; finished pages are picked up by polling.

@@ -385,3 +385,4 @@
 .rss-stage-car-name .rss-sparkle { width: 14px; height: 14px; fill: var(--accent); flex: 0 0 auto; }
 .rss-stage-car .rss-car-dots { margin-top: 5px; }
 .rss-stage-car .rss-car-nav { flex: 0 0 32px; height: 32px; }
+.rss-stage-car .rss-car-dot.theme { border-radius: 2px; }

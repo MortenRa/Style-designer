@@ -797,9 +797,51 @@ codeunit 50104 "Report Style Designer Mgt."
                     Item.Add('name', ReportLayoutList.Name);
                     Item.Add('caption', CaptionOf(ReportLayoutList));
                     Item.Add('summary', ReportLayoutList.Description);
+                    Item.Add('colors', ThemeColors(ReportLayoutList.Name));
                     Themes.Add(Item);
                 end;
             until ReportLayoutList.Next() = 0;
+    end;
+
+    // The 12 colours of an existing theme, in the slot order of "Report Theme Color Slot" (empty if it cannot be read).
+    local procedure ThemeColors(ThemeName: Text) Colors: JsonArray
+    var
+        Values: List of [Text];
+        Value: Text;
+    begin
+        if not TryReadThemeColors(ThemeName, Values) then
+            exit;
+        foreach Value in Values do
+            Colors.Add(Value);
+    end;
+
+    [TryFunction]
+    local procedure TryReadThemeColors(ThemeName: Text; var Values: List of [Text])
+    var
+        DataCompression: Codeunit "Data Compression";
+        Package: Codeunit "Temp Blob";
+        Entry: Codeunit "Temp Blob";
+        Document: XmlDocument;
+        NamespaceManager: XmlNamespaceManager;
+        Node: XmlNode;
+        SlotName: Text;
+    begin
+        Clear(Values);
+        ConfiguratorMgt.GetBaseTheme(ThemeName, Package);
+        DataCompression.OpenZipArchive(Package, false);
+        DataCompression.ExtractEntry('word/theme/theme1.xml', Entry);
+        DataCompression.CloseZipArchive();
+        XmlDocument.ReadFrom(Entry.CreateInStream(TextEncoding::UTF8), Document);
+        NamespaceManager.NameTable(Document.NameTable());
+        NamespaceManager.AddNamespace('a', 'http://schemas.openxmlformats.org/drawingml/2006/main');
+        foreach SlotName in 'dk1,lt1,dk2,lt2,accent1,accent2,accent3,accent4,accent5,accent6,hlink,folHlink'.Split(',') do
+            if Document.SelectSingleNode('//a:clrScheme/a:' + SlotName + '/a:srgbClr/@val', NamespaceManager, Node) then
+                Values.Add(UpperCase(Node.AsXmlAttribute().Value()))
+            else
+                if Document.SelectSingleNode('//a:clrScheme/a:' + SlotName + '/a:sysClr/@lastClr', NamespaceManager, Node) then
+                    Values.Add(UpperCase(Node.AsXmlAttribute().Value()))
+                else
+                    Values.Add('000000');
     end;
 
     local procedure GetPalettes() Palettes: JsonArray

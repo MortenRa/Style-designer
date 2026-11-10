@@ -28,6 +28,23 @@ page 50105 "Report Style Start"
             group(Look)
             {
                 Caption = 'Look';
+                field("Base Theme"; Rec."Base Theme")
+                {
+                    ApplicationArea = All;
+                    Caption = 'Theme';
+                    ToolTip = 'A theme that already exists in Business Central. Choosing one shows it as it is; the choices below then change it.';
+
+                    trigger OnValidate()
+                    begin
+                        // Shown as it is: the choices below go back to "keep the base theme".
+                        Rec."Theme Mode" := 'custom';
+                        Rec.Palette := Rec.Palette::KeepBase;
+                        Rec."Font Pair" := Rec."Font Pair"::KeepBase;
+                        Rec."Page Color" := Rec."Page Color"::KeepBase;
+                        Rec."Table Style" := Rec."Table Style"::KeepBase;
+                        RefreshAdvice();
+                    end;
+                }
                 field(Palette; Rec.Palette)
                 {
                     ApplicationArea = All;
