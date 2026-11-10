@@ -26,6 +26,7 @@ codeunit 50124 "Copilot Theme Checks"
         BackgroundModes();
         ProposalReachesTheme();
         ProposalsForDesigner();
+        AskedCountIsDelivered();
         Message('COPILOT CHECKS PASSED: %1', Passed);
     end;
 
@@ -69,7 +70,7 @@ codeunit 50124 "Copilot Theme Checks"
     var
         Messages: Codeunit "AOAI Chat Messages";
     begin
-        ReportStyleCopilot.BuildMessages('Calm and modern in pink', Messages);
+        ReportStyleCopilot.BuildMessages('Calm and modern in pink', 3, Messages);
         Check(Messages.ToolsExists(), 'the request carries the propose_themes tool');
     end;
 
@@ -275,6 +276,42 @@ codeunit 50124 "Copilot Theme Checks"
         Check(Value.AsArray().Count() = 12, 'each suggestion carries 12 colours');
         Item.AsObject().Get('fonts', Value);
         Check(Value.AsValue().AsInteger() = Proposal."Font Pair"::Sitka.AsInteger(), 'font pair as the designer''s id');
+    end;
+
+    // Six asked must give six different themes, also when the first answer is short; the extra theme is never kept.
+    local procedure AskedCountIsDelivered()
+    var
+        Proposal: Record "Report Style Proposal";
+        Simulation: Codeunit "Copilot Simulation";
+    begin
+        ReportStyleCopilot.SetProposalCount(6);
+        ReportStyleCopilot.Generate('modern and clean', 'Sales Invoice', '', Proposal);
+        CheckSix(Proposal, 'six asked');
+
+        Simulation.AnswerShortOnce(2);
+        ReportStyleCopilot.Generate('modern and clean', 'Sales Invoice', '', Proposal);
+        CheckSix(Proposal, 'six asked, first answer two short');
+
+        Simulation.AnswerShortOnce(5);
+        ReportStyleCopilot.Generate('calm in pink', 'Sales Invoice', '', Proposal);
+        CheckSix(Proposal, 'six pink asked, first answer five short');
+
+        ReportStyleCopilot.SetProposalCount(3);
+        ReportStyleCopilot.Generate('modern and clean', 'Sales Invoice', '', Proposal);
+        Check(Proposal.Count() = 3, 'three asked gives three, got ' + Format(Proposal.Count()));
+    end;
+
+    local procedure CheckSix(var Proposal: Record "Report Style Proposal"; What: Text)
+    var
+        Names: List of [Text];
+    begin
+        Check(Proposal.Count() = 6, What + ': six themes, got ' + Format(Proposal.Count()));
+        if Proposal.FindSet() then
+            repeat
+                Check(Proposal.Name <> 'Ignored', What + ': the extra theme is not kept');
+                Check(not Names.Contains(Proposal.Name), What + ': names are unique, ' + Proposal.Name + ' twice');
+                Names.Add(Proposal.Name);
+            until Proposal.Next() = 0;
     end;
 
     local procedure SlotHas(ThemeXml: Text; Slot: Text; Hex: Text): Boolean
