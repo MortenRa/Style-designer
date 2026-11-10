@@ -223,6 +223,7 @@ page 50105 "Report Style Start"
         ViewerReady: Boolean;
         StartTxt: Label 'Change a choice, or choose Update preview, to see the first page of the document here.';
         NoPictureErr: Label 'The preview could not be turned into a picture.';
+        ZoomTipTxt: Label 'Click to switch between the whole page and the full width.';
         MessageHtmlTxt: Label '<div style="font:13px Segoe UI,sans-serif;color:#605e5c;padding:24px">%1</div>', Locked = true;
 
     trigger OnOpenPage()
@@ -266,7 +267,7 @@ page 50105 "Report Style Start"
         if PdfDocument.Load(Pdf.CreateInStream()) then
             if PdfDocument.ConvertPdfToImage(ImageStream, Enum::"Image Format"::Png, 1) then begin
                 PreviewStatusText := StrSubstNo(PreviewCaptionTxt, DesignerMgt.GetReportCaption(Rec));
-                ShowHtml('<img alt="" style="display:block;width:100%;height:auto;box-shadow:0 1px 4px rgba(0,0,0,.25)" src="data:image/png;base64,' + Base64Convert.ToBase64(ImageStream) + '">');
+                ShowImage(Base64Convert.ToBase64(ImageStream));
                 exit;
             end;
         PreviewStatusText := NoPictureErr;
@@ -276,6 +277,21 @@ page 50105 "Report Style Start"
     local procedure ShowMessage(Message: Text)
     begin
         ShowHtml(StrSubstNo(MessageHtmlTxt, Message.Replace('&', '&amp;').Replace('<', '&lt;')));
+    end;
+
+    // The whole page fits the frame; a click switches to the full width (scrolling) and back.
+    local procedure ShowImage(PngBase64: Text)
+    var
+        Html: TextBuilder;
+    begin
+        if not ViewerReady then
+            exit;
+        Html.Append('<style>html,body{margin:0;height:100%;background:#f3f2f1}');
+        Html.Append('.p{height:100%;box-sizing:border-box;padding:8px;display:flex;align-items:center;justify-content:center}');
+        Html.Append('.p img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:zoom-in}');
+        Html.Append('.p.w{display:block;height:auto}.p.w img{display:block;width:100%;max-height:none;cursor:zoom-out}</style>');
+        Html.Append('<div class="p" id="p" title="' + ZoomTipTxt + '"><img alt="" src="data:image/png;base64,' + PngBase64 + '"></div>');
+        CurrPage.PreviewViewer.SetContent(Html.ToText(), 'document.getElementById("p").addEventListener("click",function(){this.classList.toggle("w");});');
     end;
 
     local procedure ShowHtml(Html: Text)
