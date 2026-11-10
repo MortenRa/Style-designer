@@ -373,3 +373,15 @@
 
 .rss-status { font-size: 12px; color: var(--muted); padding: 6px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
 .rss-status b { color: var(--text); font-weight: 600; }
+
+/* Suggestion carousel over the single preview: stays at the top while the pages scroll. */
+.rss-stage-car { position: sticky; top: -28px; z-index: 3; display: flex; align-items: center; gap: 12px; width: min(560px, 100%); margin: -28px auto 16px; padding: 8px 10px; background: rgba(255,255,255,.96); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 10px 10px; box-shadow: 0 4px 12px rgba(0,0,0,.06); box-sizing: border-box; }
+.rss-stage-car[hidden] { display: none; }
+.rss-stage-car-mid { flex: 1 1 auto; min-width: 0; text-align: center; }
+.rss-stage-car-name { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; white-space: nowrap; overflow: hidden; }
+.rss-stage-car-name b { overflow: hidden; text-overflow: ellipsis; }
+.rss-stage-car-name span { color: var(--muted); font-size: 12px; }
+.rss-stage-car-name .rss-swatches { flex: 0 0 72px; height: 14px; border-radius: 3px; }
+.rss-stage-car-name .rss-sparkle { width: 14px; height: 14px; fill: var(--accent); flex: 0 0 auto; }
+.rss-stage-car .rss-car-dots { margin-top: 5px; }
+.rss-stage-car .rss-car-nav { flex: 0 0 32px; height: 32px; }

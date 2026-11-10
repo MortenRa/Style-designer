@@ -46,6 +46,7 @@ function StudioInit(root) {
         '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until you apply.</div>' +
         '    </header>' +
         '    <div class="rss-stage" id="rss-stage">' +
+        '      <div class="rss-stage-car" id="rss-stage-car" hidden></div>' +
         '      <div class="rss-pages" id="rss-pages"></div>' +
         '      <div class="rss-gallery" id="rss-gallery" hidden></div>' +
         '      <div class="rss-overlay" id="rss-overlay"><div class="rss-spinner"></div><div id="rss-overlay-text">Rendering preview…</div></div>' +
@@ -65,6 +66,13 @@ function StudioInit(root) {
         if (!e.target.closest) return;
         if (e.target.closest('[data-clear-suggestions]')) {
             Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('ClearSuggestionsRequested', []);
+            return;
+        }
+        // The suggestion strip over the preview: arrows step through the suggestions (round), a dot picks one.
+        var step = e.target.closest('[data-stage-step]'), pick = e.target.closest('[data-stage-pick]');
+        if (step || pick) {
+            var n = studio.data.copilot.suggestions.length, cur = pickedSuggestion(), delta = step ? +step.getAttribute('data-stage-step') : 0;
+            useSuggestion(pick ? +pick.getAttribute('data-stage-pick') : cur < 0 ? (delta > 0 ? 0 : n - 1) : (cur + delta + n) % n);
             return;
         }
         var car = e.target.closest('.rss-car');
@@ -421,6 +429,61 @@ function renderPanel() {
     aside.innerHTML = showAside ? '<div class="rss-scroll">' + copilotBody + '</div>' : '';
     if (showAside) bindSuggestions(aside);
     wirePanel(panel);
+    // A redraw starts the carousels at the first card; show the chosen suggestion instead.
+    studio.root.querySelectorAll('.rss-car .rss-carousel').forEach(function (track) {
+        var k = Array.prototype.indexOf.call(track.children, track.querySelector('.rss-card.on'));
+        if (k <= 0) return;
+        track.style.scrollBehavior = 'auto';
+        track.scrollLeft = k * track.clientWidth;
+        track.style.scrollBehavior = '';
+        updateCarouselDots(track.closest('.rss-car'));
+    });
+    renderStageCarousel();
+}
+
+// The suggestion that matches the current choices, or -1.
+function pickedSuggestion() {
+    var c = studio.data && studio.data.copilot, s = studio.state;
+    if (!c || !c.suggestions || s.themeMode !== 'custom' || s.palette !== c.customPalette) return -1;
+    for (var i = 0; i < c.suggestions.length; i++) {
+        var g = c.suggestions[i];
+        if (sameColors(g.colors, s.customColors) && g.fonts === s.fonts && g.tableStyle === s.tableStyle && g.pageColor === s.pageColor) return i;
+    }
+    return -1;
+}
+
+function useSuggestion(i) {
+    var s = studio.state, g = studio.data.copilot.suggestions[i];
+    s.themeMode = 'custom';
+    s.palette = studio.data.copilot.customPalette;
+    s.customColors = g.colors.slice();
+    s.fonts = g.fonts;
+    s.tableStyle = g.tableStyle;
+    s.pageColor = g.pageColor;
+    if (g.customPage) s.customPage = g.customPage;
+    s.themeName = g.name;
+    renderPanel();
+    requestPreview(0);
+}
+
+// Over the single preview: the suggestions as a carousel, so they can be compared on the page itself.
+function renderStageCarousel() {
+    var bar = byId('rss-stage-car');
+    if (!bar) return;
+    var list = studio.data && studio.data.copilot && studio.data.copilot.suggestions;
+    var show = studio.view !== 'gallery' && !!list && list.length > 0;
+    bar.hidden = !show;
+    if (!show) { bar.innerHTML = ''; return; }
+    var i = pickedSuggestion();
+    var dots = list.map(function (g, k) {
+        return '<button class="rss-car-dot' + (k === i ? ' on' : '') + '" data-stage-pick="' + k + '" title="' + esc(g.name) + '" aria-label="' + esc(g.name) + '"></button>';
+    }).join('');
+    var label = i >= 0
+        ? swatchRow(list[i].colors) + '<b>' + esc(list[i].name) + '</b><span>' + (i + 1) + ' of ' + list.length + '</span>'
+        : SPARKLE + '<b>Copilot suggestions</b><span>' + list.length + ' themes, use the arrows to try them</span>';
+    bar.innerHTML = '<button class="rss-car-nav" data-stage-step="-1" aria-label="Previous suggestion">‹</button>' +
+        '<div class="rss-stage-car-mid"><div class="rss-stage-car-name">' + label + '</div><div class="rss-car-dots">' + dots + '</div></div>' +
+        '<button class="rss-car-nav" data-stage-step="1" aria-label="Next suggestion">›</button>';
 }
 
 function tabButton(id, label, state) {
@@ -469,18 +532,7 @@ function updateCarouselDots(car) {
 // Click handlers for the Copilot suggestions, wherever they are shown (theme tab or side panel).
 function bindSuggestions(root) {
     var s = studio.state;
-    on(root, '[data-suggestion]', function (el) {
-        var g = studio.data.copilot.suggestions[+el.getAttribute('data-suggestion')];
-        s.palette = studio.data.copilot.customPalette;
-        s.customColors = g.colors.slice();
-        s.fonts = g.fonts;
-        s.tableStyle = g.tableStyle;
-        s.pageColor = g.pageColor;
-        if (g.customPage) s.customPage = g.customPage;
-        s.themeName = g.name;
-        renderPanel();
-        requestPreview(0);
-    });
+    on(root, '[data-suggestion]', function (el) { useSuggestion(+el.getAttribute('data-suggestion')); });
     on(root, '[data-compare]', function () {
         if (!studio.data.copilot || !studio.data.copilot.suggestions || !studio.data.copilot.suggestions.length) return;
         gallery.compare = studio.data.copilot.suggestions.slice();
@@ -733,6 +785,7 @@ function setView(view) {
     g.hidden = view !== 'gallery';
     byId('rss-pages').hidden = view === 'gallery';
     hide('rss-error');
+    renderStageCarousel();
     if (view === 'gallery') { hide('rss-overlay'); refreshGallery(0); }
     else { gallery.queue = []; gallery.jobs = {}; gallery.compare = null; gallery.cmp = null; stopGalleryPoll(); requestPreview(0); }
 }
