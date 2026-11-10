@@ -24,8 +24,6 @@ permissionset 50100 "REPORT STYLE DESIGN"
         table "Report Style Config" = X,
         page "Report Style Designer" = X,
         page "Report Style Start" = X,
-        page "Report Style Preview Part" = X,
-        table "Report Style Preview Image" = X,
         page "Report Style Body Layouts" = X,
         codeunit "Report Theme Generator" = X,
         codeunit "Report Header Footer Generator" = X,

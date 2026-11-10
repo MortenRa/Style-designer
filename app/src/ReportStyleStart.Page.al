@@ -1,5 +1,8 @@
 namespace Abakion.ReportStyleDesigner;
 
+using System.Integration;
+using System.IO;
+using System.Text;
 using System.Utilities;
 
 /// The simple entry point (phase 1): a few plain choices for the look, then the full designer for more detail.
@@ -17,6 +20,13 @@ page 50105 "Report Style Start"
     {
         area(Content)
         {
+            // One FastTab with two columns: the choices on the left, the preview on the right (wider than a factbox).
+            group(Main)
+            {
+                ShowCaption = false;
+            group(Choices)
+            {
+                ShowCaption = false;
             group(Look)
             {
                 Caption = 'Look';
@@ -109,13 +119,54 @@ page 50105 "Report Style Start"
                     ToolTip = 'Soft recommendations based on the settings. They explain a likely problem; you can still apply the style.';
                 }
             }
-        }
-        area(FactBoxes)
-        {
-            part(Preview; "Report Style Preview Part")
+            }
+            group(PreviewGroup)
             {
-                ApplicationArea = All;
                 Caption = 'Preview';
+                field(DocumentName; DocumentText)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Document';
+                    Editable = false;
+                    ToolTip = 'The document the preview shows. Choose another report layout to see the style on it.';
+
+                    trigger OnAssistEdit()
+                    var
+                        ConfiguratorMgt: Codeunit "Report Style Configurator Mgt.";
+                    begin
+                        Rec.Modify(true);
+                        Commit();
+                        if not ConfiguratorMgt.LookupBodyLayout(Rec) then
+                            exit;
+                        Rec.Modify(true);
+                        Commit();
+                        ComputeDocumentText();
+                        UpdatePreview();
+                        CurrPage.Update(false);
+                    end;
+                }
+                // Microsoft's Web Page Viewer (System Application) shows the page as a picture at the column's width;
+                // a Media field is limited to a small thumbnail outside a factbox. No add-in of our own.
+                usercontrol(PreviewViewer; WebPageViewer)
+                {
+                    ApplicationArea = All;
+
+                    trigger ControlAddInReady(CallbackUrl: Text)
+                    begin
+                        ViewerReady := true;
+                        CurrPage.PreviewViewer.InitializeFullIFrame();
+                        ShowMessage(StartTxt);
+                    end;
+                }
+                field(PreviewStatus; PreviewStatusText)
+                {
+                    ApplicationArea = All;
+                    ShowCaption = false;
+                    Editable = false;
+                    Style = Subordinate;
+                    ToolTip = 'What the preview shows, or why it could not be shown.';
+                }
+            }
             }
         }
     }
@@ -164,7 +215,15 @@ page 50105 "Report Style Start"
 
     var
         AdviceText: Text;
+        DocumentText: Text;
         PreviewCaptionTxt: Label '%1 · page 1 · not applied yet', Comment = '%1 = report name';
+        DocumentTxt: Label '%1 (%2) · layout %3', Comment = '%1 = report name, %2 = report ID, %3 = layout name';
+        NoDocumentTxt: Label 'No document chosen yet. Choose one to see the preview.';
+        PreviewStatusText: Text;
+        ViewerReady: Boolean;
+        StartTxt: Label 'Change a choice, or choose Update preview, to see the first page of the document here.';
+        NoPictureErr: Label 'The preview could not be turned into a picture.';
+        MessageHtmlTxt: Label '<div style="font:13px Segoe UI,sans-serif;color:#605e5c;padding:24px">%1</div>', Locked = true;
 
     trigger OnOpenPage()
     var
@@ -173,25 +232,63 @@ page 50105 "Report Style Start"
         DesignerMgt.GetConfig(Rec);
     end;
 
-    // Renders the chosen document with the current choices and shows page 1 in the preview part.
+    local procedure ComputeDocumentText()
+    var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
+    begin
+        if Rec."Target Report ID" = 0 then
+            DocumentText := NoDocumentTxt
+        else
+            DocumentText := StrSubstNo(DocumentTxt, DesignerMgt.GetReportCaption(Rec), Rec."Target Report ID", Rec."Target Layout Name");
+    end;
+
+    // Renders the chosen document with the current choices and shows page 1 as a picture (turned into PNG on the server).
     // The preview writes per-user layout settings and restores them, so it runs outside the page's write transaction.
     local procedure UpdatePreview()
     var
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
         Runner: Codeunit "Report Style Designer Runner";
+        PdfDocument: Codeunit "PDF Document";
+        Base64Convert: Codeunit "Base64 Convert";
         Pdf: Codeunit "Temp Blob";
+        Image: Codeunit "Temp Blob";
+        ImageStream: InStream;
     begin
-        if Runner.Preview(Rec) then begin
-            Runner.GetPdf(Pdf);
-            CurrPage.Preview.Page.ShowPdf(Pdf, StrSubstNo(PreviewCaptionTxt, DesignerMgt.GetReportCaption(Rec)));
-        end else
-            CurrPage.Preview.Page.ShowError(Runner.GetErrorText());
+        if not ViewerReady then
+            exit;
+        if not Runner.Preview(Rec) then begin
+            PreviewStatusText := Runner.GetErrorText();
+            ShowMessage(PreviewStatusText);
+            exit;
+        end;
+        Runner.GetPdf(Pdf);
+        Image.CreateInStream(ImageStream);
+        if PdfDocument.Load(Pdf.CreateInStream()) then
+            if PdfDocument.ConvertPdfToImage(ImageStream, Enum::"Image Format"::Png, 1) then begin
+                PreviewStatusText := StrSubstNo(PreviewCaptionTxt, DesignerMgt.GetReportCaption(Rec));
+                ShowHtml('<img alt="" style="display:block;width:100%;height:auto;box-shadow:0 1px 4px rgba(0,0,0,.25)" src="data:image/png;base64,' + Base64Convert.ToBase64(ImageStream) + '">');
+                exit;
+            end;
+        PreviewStatusText := NoPictureErr;
+        ShowMessage(PreviewStatusText);
+    end;
+
+    local procedure ShowMessage(Message: Text)
+    begin
+        ShowHtml(StrSubstNo(MessageHtmlTxt, Message.Replace('&', '&amp;').Replace('<', '&lt;')));
+    end;
+
+    local procedure ShowHtml(Html: Text)
+    begin
+        if ViewerReady then
+            CurrPage.PreviewViewer.SetContent(Html);
     end;
 
     // A Card page fills its non-source fields here, not in OnAfterGetCurrRecord (that is for list pages).
     trigger OnAfterGetRecord()
     begin
         ComputeAdvice();
+        ComputeDocumentText();
     end;
 
     local procedure ComputeAdvice()
