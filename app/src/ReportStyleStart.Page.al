@@ -1,5 +1,7 @@
 namespace Abakion.ReportStyleDesigner;
 
+using System.Utilities;
+
 /// The simple entry point (phase 1): a few plain choices for the look, then the full designer for more detail.
 /// A standard page, not the add-in, so it does not add control add-in maintenance.
 page 50105 "Report Style Start"
@@ -108,12 +110,40 @@ page 50105 "Report Style Start"
                 }
             }
         }
+        area(FactBoxes)
+        {
+            part(Preview; "Report Style Preview Part")
+            {
+                ApplicationArea = All;
+                Caption = 'Preview';
+            }
+        }
     }
 
     actions
     {
+        area(Promoted)
+        {
+            actionref(UpdatePreview_Promoted; UpdatePreviewAction) { }
+            actionref(OpenDesigner_Promoted; OpenDesigner) { }
+        }
         area(Processing)
         {
+            // Not rendered while the page opens: the report's progress dialog cannot be shown before the page is there.
+            action(UpdatePreviewAction)
+            {
+                ApplicationArea = All;
+                Caption = 'Update preview';
+                ToolTip = 'Show the first page of the chosen document with these choices. The preview also updates after each change.';
+                Image = Refresh;
+
+                trigger OnAction()
+                begin
+                    Rec.Modify(true);
+                    Commit();
+                    UpdatePreview();
+                end;
+            }
             action(OpenDesigner)
             {
                 ApplicationArea = All;
@@ -134,12 +164,28 @@ page 50105 "Report Style Start"
 
     var
         AdviceText: Text;
+        PreviewCaptionTxt: Label '%1 · page 1 · not applied yet', Comment = '%1 = report name';
 
     trigger OnOpenPage()
     var
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
     begin
         DesignerMgt.GetConfig(Rec);
+    end;
+
+    // Renders the chosen document with the current choices and shows page 1 in the preview part.
+    // The preview writes per-user layout settings and restores them, so it runs outside the page's write transaction.
+    local procedure UpdatePreview()
+    var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        Runner: Codeunit "Report Style Designer Runner";
+        Pdf: Codeunit "Temp Blob";
+    begin
+        if Runner.Preview(Rec) then begin
+            Runner.GetPdf(Pdf);
+            CurrPage.Preview.Page.ShowPdf(Pdf, StrSubstNo(PreviewCaptionTxt, DesignerMgt.GetReportCaption(Rec)));
+        end else
+            CurrPage.Preview.Page.ShowError(Runner.GetErrorText());
     end;
 
     // A Card page fills its non-source fields here, not in OnAfterGetCurrRecord (that is for list pages).
@@ -159,6 +205,9 @@ page 50105 "Report Style Start"
     local procedure RefreshAdvice()
     begin
         ComputeAdvice();
+        Rec.Modify(true);
+        Commit();
+        UpdatePreview();
         CurrPage.Update(false);
     end;
 
