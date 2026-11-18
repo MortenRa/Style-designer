@@ -804,7 +804,7 @@ function tableThumb(styleId, c) {
 // The current theme and header/footer on several documents at once, first page each, rendered one after another
 // by the same private preview as "This document". Results are cached per document and style.
 
-var GALLERY_MAX = 6;          // own selection
+var GALLERY_MAX = 10;         // own selection: "my 10 most important documents"
 var GALLERY_GROUP_MAX = 12;   // a document group
 // Typical customer-facing documents, preferred when the gallery is filled for the first time.
 var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
@@ -893,6 +893,13 @@ function galleryDocs() {
     return docs;
 }
 
+// Pages per row in "Your documents": 3 by default, so 9 documents fill a 3 × 3 grid.
+function galleryCols() {
+    var n = 3;
+    try { n = +(localStorage.getItem('rss-gallery-cols') || 3); } catch (e) { n = 3; }
+    return [2, 3, 4].indexOf(n) >= 0 ? n : 3;
+}
+
 function saveGalleryDocs(docs) {
     try { localStorage.setItem('rss-gallery-docs', JSON.stringify(docs.map(docKey))); } catch (e) { /* storage blocked: the default set is used */ }
 }
@@ -914,11 +921,16 @@ function renderGallery() {
             esc(g.caption) + ' <span>' + g.reports.length + '</span></button>';
     }).join('') + '<button class="' + (groupId === 'mine' ? 'on' : '') + '" data-ggroup="mine">My selection</button>';
     var more = group && group.reports.length > docs.length ? ' Showing ' + docs.length + ' of ' + group.reports.length + ' reports.' : '';
-    var html = '<div class="rss-gal-groups" role="tablist">' + tabs + '</div>' +
+    var cols = galleryCols();
+    var colButtons = [2, 3, 4].map(function (n) {
+        return '<button class="' + (n === cols ? 'on' : '') + '" data-gcols="' + n + '" aria-pressed="' + (n === cols) + '">' + n + '</button>';
+    }).join('');
+    var html = '<div class="rss-gal-bar"><div class="rss-gal-groups" role="tablist">' + tabs + '</div>' +
+        '<div class="rss-gal-cols" role="group" aria-label="Pages per row"><span>Per row</span>' + colButtons + '</div></div>' +
         '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
         '<span class="rss-gal-note">' + (group
             ? 'Each report in ' + esc(group.caption.toLowerCase()) + ' with the layout it prints with.' + more
-            : 'Your own pick of documents.') + ' Click a page to open it.</span></div><div class="rss-gal-grid">';
+            : 'Your own pick of documents.') + ' Click a page to open it.</span></div><div class="rss-gal-grid cols-' + cols + '">';
     if (group && !docs.length) html += '<div class="rss-gal-empty">No document in this group has a Body layout yet.</div>';
     docs.forEach(function (l, i) {
         html += '<div class="rss-gal-card" data-doc="' + esc(docKey(l)) + '">' +
@@ -947,6 +959,13 @@ function renderGallery() {
     });
     host.querySelectorAll('[data-open]').forEach(function (b) {
         b.addEventListener('click', function () { openFromGallery(docs[+b.getAttribute('data-open')]); });
+    });
+    host.querySelectorAll('[data-gcols]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            try { localStorage.setItem('rss-gallery-cols', b.getAttribute('data-gcols')); } catch (e) { /* the default is used */ }
+            // The pages are drawn at their box width, so cached pages are drawn again at the new size.
+            renderGallery();
+        });
     });
     host.querySelectorAll('[data-remove]').forEach(function (b) {
         b.addEventListener('click', function () {
@@ -983,7 +1002,8 @@ function suggestionState(g) {
 // Left and right can be any two suggestions; a click on a document shows it in both previews.
 function renderComparison(docs) {
     var host = byId('rss-gallery'), list = gallery.compare, cmp = gallery.cmp, cells = [];
-    if (!cmp) cmp = gallery.cmp = { a: 0, b: list.length > 1 ? 1 : 0, doc: 0 };
+    if (!cmp) cmp = gallery.cmp = { a: 0, b: list.length > 1 ? 1 : 0, doc: 0, mode: 'side', rows: null };
+    if (cmp.mode === 'grid') { renderCompareGrid(docs); return; }
     if (cmp.doc >= docs.length) cmp.doc = 0;
     var doc = docs[cmp.doc], styleA = suggestionState(list[cmp.a]), styleB = suggestionState(list[cmp.b]);
     var chips = function (attr, current) {
@@ -1004,8 +1024,7 @@ function renderComparison(docs) {
     var docChips = docs.map(function (l, i) {
         return '<button class="rss-chip' + (i === cmp.doc ? ' on' : '') + '" data-cmp-doc="' + i + '">' + esc(l.reportName) + '</button>';
     }).join('');
-    var html = '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
-        '<span class="rss-gal-note"><button class="rss-link" data-cmp-exit>Back to my documents</button></span></div>' +
+    var html = compareHead('side') +
         '<div class="rss-cmp-pick"><div><span>Document</span>' + docChips + '</div></div>' +
         '<div class="rss-cmp-big">' +
             '<div class="rss-cmp-col"><div class="rss-cmp-pick"><div><span>Left</span>' + chips('data-cmp-a', cmp.a) + '</div></div>' + side('big-a', list[cmp.a]) + '</div>' +
@@ -1013,7 +1032,7 @@ function renderComparison(docs) {
         '</div>';
     host.innerHTML = html;
 
-    host.querySelector('[data-cmp-exit]').addEventListener('click', function () { gallery.compare = null; gallery.cmp = null; renderGallery(); });
+    wireCompareHead(host);
     host.querySelectorAll('[data-cmp-a]').forEach(function (b) { b.addEventListener('click', function () { cmp.a = +b.getAttribute('data-cmp-a'); renderGallery(); }); });
     host.querySelectorAll('[data-cmp-b]').forEach(function (b) { b.addEventListener('click', function () { cmp.b = +b.getAttribute('data-cmp-b'); renderGallery(); }); });
     host.querySelectorAll('[data-cmp-doc]').forEach(function (b) { b.addEventListener('click', function () { cmp.doc = +b.getAttribute('data-cmp-doc'); renderGallery(); }); });
@@ -1037,6 +1056,76 @@ function renderComparison(docs) {
     });
 
     cells.push({ index: 'big-a', doc: doc, style: styleA }, { index: 'big-b', doc: doc, style: styleB });
+    gallery.expected = {};
+    cells.forEach(function (c) {
+        var key = docKey(c.doc) + '|' + c.style;
+        gallery.expected[c.index] = key;
+        var hit = gallery.cache[key];
+        if (hit) showGalleryResult(c.index, hit); else gallery.queue.push({ index: c.index, doc: c.doc, key: key, state: c.style });
+    });
+    sendGalleryBatch();
+}
+
+// The head of both compare views: status, the switch between side by side and grid, and the way back.
+function compareHead(mode) {
+    return '<div class="rss-gal-head"><span id="rss-gal-status"></span>' +
+        '<span class="rss-cmp-mode" role="group" aria-label="Compare as">' +
+        '<button class="' + (mode === 'side' ? 'on' : '') + '" data-cmp-mode="side" aria-pressed="' + (mode === 'side') + '">Side by side</button>' +
+        '<button class="' + (mode === 'grid' ? 'on' : '') + '" data-cmp-mode="grid" aria-pressed="' + (mode === 'grid') + '">Grid</button></span>' +
+        '<span class="rss-gal-note"><button class="rss-link" data-cmp-exit>Back to my documents</button></span></div>';
+}
+
+function wireCompareHead(host) {
+    host.querySelector('[data-cmp-exit]').addEventListener('click', function () { gallery.compare = null; gallery.cmp = null; renderGallery(); });
+    host.querySelectorAll('[data-cmp-mode]').forEach(function (b) {
+        b.addEventListener('click', function () { gallery.cmp.mode = b.getAttribute('data-cmp-mode'); renderGallery(); });
+    });
+}
+
+// Up to 3 themes (rows) on up to 3 documents (columns): a 3 × 3 grid that shows which theme works across documents.
+// The chips choose the rows; a fourth choice replaces the one chosen first.
+var COMPARE_GRID_MAX = 3;
+function renderCompareGrid(docs) {
+    var host = byId('rss-gallery'), list = gallery.compare, cmp = gallery.cmp, cells = [];
+    if (!cmp.rows) cmp.rows = list.slice(0, COMPARE_GRID_MAX).map(function (_, k) { return k; });
+    var cols = docs.slice(0, COMPARE_GRID_MAX);
+    var chips = list.map(function (g, k) {
+        var on = cmp.rows.indexOf(k) >= 0;
+        return '<button class="rss-chip' + (on ? ' on' : '') + '" data-cmp-row="' + k + '" aria-pressed="' + on + '">' + esc(g.name) + '</button>';
+    }).join('');
+    var html = compareHead('grid') +
+        '<div class="rss-cmp-pick"><div><span>Themes (up to ' + COMPARE_GRID_MAX + ')</span>' + chips + '</div></div>' +
+        '<div class="rss-cmp-grid" style="grid-template-columns: 140px repeat(' + cols.length + ', minmax(0, 1fr))"><div></div>' +
+        cols.map(function (l) { return '<div class="rss-cmp-head"><b>' + esc(l.reportName) + '</b><small>' + esc(l.caption || l.name) + '</small></div>'; }).join('');
+    cmp.rows.forEach(function (k, r) {
+        var g = list[k], style = suggestionState(g);
+        html += '<div class="rss-cmp-label"><b>' + esc(g.name) + '</b><small>' + esc(g.reason || '') + '</small></div>';
+        cols.forEach(function (l, c) {
+            var id = 'g' + r + '-' + c;
+            html += '<div class="rss-gal-thumb rss-cmp-large rss-cmp-gridcell" id="rss-gal-' + id + '" data-zoom="' + id + '" title="Click to see it larger"><div class="rss-gal-wait"><div class="rss-spinner"></div>Waiting…</div></div>';
+            cells.push({ index: id, doc: l, style: style });
+        });
+    });
+    host.innerHTML = html + '</div>';
+
+    wireCompareHead(host);
+    host.querySelectorAll('[data-cmp-row]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var k = +b.getAttribute('data-cmp-row'), at = cmp.rows.indexOf(k);
+            if (at >= 0) { if (cmp.rows.length > 1) cmp.rows.splice(at, 1); }
+            else { cmp.rows.push(k); if (cmp.rows.length > COMPARE_GRID_MAX) cmp.rows.shift(); }
+            renderGallery();
+        });
+    });
+    host.querySelectorAll('[data-zoom]').forEach(function (el) {
+        el.addEventListener('click', function () {
+            var index = el.getAttribute('data-zoom');
+            el.classList.toggle('rss-zoomed');
+            var hit = gallery.cache[gallery.expected[index]];
+            if (hit) showGalleryResult(index, hit);
+        });
+    });
+
     gallery.expected = {};
     cells.forEach(function (c) {
         var key = docKey(c.doc) + '|' + c.style;
