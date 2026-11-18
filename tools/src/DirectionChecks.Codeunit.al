@@ -23,6 +23,15 @@ codeunit 50135 "Direction Checks"
         Directions.Apply(Config);
         Check(Config."HF Logo" = 'none', 'Not chosen leaves the configuration as it is');
 
+        // A logo placement the user picked is kept by every direction.
+        Config.Init();
+        Config."HF Logo" := 'left';
+        Config."Logo Chosen" := true;
+        Config.Direction := Config.Direction::Formal;
+        Directions.Apply(Config);
+        Check(Config."HF Logo" = 'left', 'Formal keeps the logo placement the user picked');
+        Check(Config."Font Pair" = Config."Font Pair"::GeorgiaVerdana, 'Formal still sets its fonts when the logo is kept');
+
         foreach Ordinal in Enum::"Report Style Direction".Ordinals() do
             if Ordinal <> 0 then begin
                 Config.Init();

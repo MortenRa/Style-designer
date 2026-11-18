@@ -3,6 +3,7 @@ namespace Abakion.ReportStyleDesigner;
 /// The five design directions. A direction sets the colours, fonts, page, tables and header/footer together,
 /// so the user starts from a finished look and changes details afterwards.
 /// Only options the Word platform can deliver are used: the checked font pairs and the generator's header/footer parts.
+/// A logo placement the user has picked is kept.
 codeunit 50134 "Report Style Directions"
 {
     Access = Internal;
@@ -84,7 +85,9 @@ codeunit 50134 "Report Style Directions"
 
     local procedure SetHeaderFooter(var Config: Record "Report Style Config"; Logo: Text[10]; PageNumber: Text[10]; Footer: Text[10]; AccentLine: Boolean)
     begin
-        Config."HF Logo" := Logo;
+        // The logo placement the user picked wins over the direction's own.
+        if not Config."Logo Chosen" then
+            Config."HF Logo" := Logo;
         Config."HF Page Number" := PageNumber;
         Config."HF Footer" := Footer;
         Config."HF Accent Line" := AccentLine;

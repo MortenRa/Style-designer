@@ -1,0 +1,21 @@
+html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; background: transparent; font: 13px "Segoe UI", sans-serif; color: #323130; }
+.lp-row { display: flex; gap: 10px; height: 100%; box-sizing: border-box; padding: 4px 2px; }
+.lp-pick { flex: 1; min-width: 0; font: inherit; color: inherit; background: #fff; border: 1px solid #d1d1d1; border-radius: 8px; padding: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.lp-pick:hover { border-color: #8a8886; }
+.lp-pick:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }
+.lp-pick.on { border-color: #0f6cbd; box-shadow: 0 0 0 2px #0f6cbd inset; }
+/* A4 page at a fixed height; the width follows the A4 ratio. */
+.lp-sheet { height: 150px; aspect-ratio: 210 / 297; max-width: 100%; box-sizing: border-box; background: #fff; border: 1px solid #e1dfdd; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); padding: 9px 8px; display: flex; flex-direction: column; gap: 4px; }
+.lp-title { display: block; height: 6px; width: 55%; background: #605e5c; border-radius: 1px; }
+.lp-logo-line { display: flex; height: 18px; }
+.lp-logo-line img { max-height: 100%; max-width: 60%; object-fit: contain; }
+.lp-left { justify-content: flex-start; }
+.lp-center { justify-content: center; }
+.lp-right { justify-content: flex-end; }
+.lp-text { display: block; height: 3px; background: #edebe9; border-radius: 1px; }
+.lp-text.lp-gap { margin-top: 10px; }
+.lp-cap { font-size: 12px; }
+.lp-empty { padding: 16px 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.lp-empty p { margin: 0; color: #605e5c; }
+.lp-upload { font: inherit; background: #0f6cbd; color: #fff; border: 0; border-radius: 4px; padding: 6px 14px; cursor: pointer; }
+.lp-upload:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }

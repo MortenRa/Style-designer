@@ -25,6 +25,35 @@ page 50105 "Report Style Start"
             group(Choices)
             {
                 ShowCaption = false;
+            group(LogoGroup)
+            {
+                Caption = 'Your logo';
+                InstructionalText = 'Start with your logo. Choose where it goes on your documents.';
+
+                usercontrol(LogoPicker; "Report Style Logo Picker")
+                {
+                    ApplicationArea = All;
+
+                    trigger Ready()
+                    begin
+                        LogoPickerReady := true;
+                        ShowLogo();
+                    end;
+
+                    trigger PlacementChosen(Placement: Text)
+                    begin
+                        Rec."HF Logo" := CopyStr(Placement, 1, MaxStrLen(Rec."HF Logo"));
+                        Rec."Logo Chosen" := true;
+                        Rec."Header Mode" := 'design';
+                        RefreshAdvice();
+                    end;
+
+                    trigger UploadRequested()
+                    begin
+                        UploadLogo();
+                    end;
+                }
+            }
             group(DirectionGroup)
             {
                 Caption = 'Design direction';
@@ -39,6 +68,7 @@ page 50105 "Report Style Start"
                         Directions: Codeunit "Report Style Directions";
                     begin
                         Directions.Apply(Rec);
+                        ShowLogo();
                         RefreshAdvice();
                     end;
                 }
@@ -206,6 +236,7 @@ page 50105 "Report Style Start"
         {
             actionref(UpdatePreview_Promoted; UpdatePreviewAction) { }
             actionref(OpenDesigner_Promoted; OpenDesigner) { }
+            actionref(UploadLogo_Promoted; UploadLogoAction) { }
         }
         area(Processing)
         {
@@ -222,6 +253,18 @@ page 50105 "Report Style Start"
                     Rec.Modify(true);
                     Commit();
                     UpdatePreview();
+                end;
+            }
+            action(UploadLogoAction)
+            {
+                ApplicationArea = All;
+                Caption = 'Upload logo';
+                ToolTip = 'Upload the company logo. It is saved in Company Information and used on all documents.';
+                Image = Import;
+
+                trigger OnAction()
+                begin
+                    UploadLogo();
                 end;
             }
             action(OpenDesigner)
@@ -245,6 +288,12 @@ page 50105 "Report Style Start"
     var
         AdviceText: Text;
         DirectionText: Text;
+        LogoPickerReady: Boolean;
+        NoLogoTxt: Label 'Your company has no logo in Company Information yet. Upload one to see it on your documents.';
+        UploadTitleTxt: Label 'Upload logo';
+        ImageFilterTxt: Label 'Images (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp', Locked = true;
+        CompanyInformationTableTok: Label '79', Locked = true;
+        NoCompanyInformationErr: Label 'Company Information is not set up, so the logo cannot be saved.';
         DocumentText: Text;
         PreviewCaptionTxt: Label '%1 · page 1 · not applied yet', Comment = '%1 = report name';
         DocumentTxt: Label '%1 (%2) · layout %3', Comment = '%1 = report name, %2 = report ID, %3 = layout name';
@@ -259,6 +308,49 @@ page 50105 "Report Style Start"
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
     begin
         DesignerMgt.GetConfig(Rec);
+    end;
+
+    // The company logo on the picker's small pages, or an upload prompt when there is none.
+    local procedure ShowLogo()
+    var
+        Copilot: Codeunit "Report Style Copilot";
+        BrandHex: Text;
+        LogoBase64: Text;
+    begin
+        if not LogoPickerReady then
+            exit;
+        Copilot.GetCompanyBrand(BrandHex, LogoBase64);
+        if LogoBase64 = '' then
+            CurrPage.LogoPicker.ShowNoLogo(NoLogoTxt)
+        else
+            CurrPage.LogoPicker.ShowLogo(LogoBase64, Rec."HF Logo");
+    end;
+
+    // Saves the picture in Company Information (Picture), read without a Base Application dependency.
+    local procedure UploadLogo()
+    var
+        TempBlob: Codeunit "Temp Blob";
+        CompanyInformation: RecordRef;
+        PictureStream: InStream;
+        PictureOutStream: OutStream;
+        FileName: Text;
+        TableNo: Integer;
+    begin
+        Rec.Modify(true);
+        Commit();
+        if not UploadIntoStream(UploadTitleTxt, '', ImageFilterTxt, FileName, PictureStream) then
+            exit;
+        TempBlob.CreateOutStream(PictureOutStream);
+        CopyStream(PictureOutStream, PictureStream);
+        Evaluate(TableNo, CompanyInformationTableTok);
+        CompanyInformation.Open(TableNo);
+        if not CompanyInformation.FindFirst() then
+            Error(NoCompanyInformationErr);
+        TempBlob.ToRecordRef(CompanyInformation, 29);
+        CompanyInformation.Modify(true);
+        Commit();
+        ShowLogo();
+        UpdatePreview();
     end;
 
     local procedure ComputeDocumentText()

@@ -66,6 +66,8 @@ table 50100 "Report Style Config"
         // With Apply To = group: customer, vendor or internal (see "Report Style Doc Groups").
         field(28; "Apply Group"; Text[20]) { Caption = 'Apply to group'; }
         field(29; Direction; Enum "Report Style Direction") { Caption = 'Design direction'; }
+        // Set when the user picked the logo placement; a design direction then keeps it.
+        field(30; "Logo Chosen"; Boolean) { Caption = 'Logo placement chosen'; }
     }
 
     keys
