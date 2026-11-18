@@ -20,8 +20,12 @@ controladdin "Report Style Page Preview"
     event Ready();
     // A click on the page when SetOpenOnClick(true) was called: open it full size.
     event FullViewRequested();
+    // The arrows on the suggestion bar: -1 previous, 1 next.
+    event SuggestionStep(Delta: Integer);
 
     procedure ShowPdf(PdfBase64: Text; Tooltip: Text);
     procedure ShowMessage(Message: Text);
     procedure SetOpenOnClick(Open: Boolean);
+    // Count 0 hides the bar; Index 0 means none of the suggestions is in the preview.
+    procedure SetSuggestion(Name: Text; Index: Integer; Count: Integer; Reason: Text);
 }

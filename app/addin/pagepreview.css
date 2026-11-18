@@ -1,7 +1,21 @@
 html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; background: transparent; }
+#controlAddIn { display: flex; flex-direction: column; }
+.pp-body { flex: 1 1 auto; min-height: 0; }
 .pp { height: 100%; box-sizing: border-box; padding: 4px; overflow: auto; }
 .pp canvas { display: block; margin: 0 auto; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
 .pp.page canvas, .pp.width canvas { cursor: zoom-in; }
 .pp.large canvas { cursor: zoom-out; margin: 0; }
 .pp.opens canvas { cursor: zoom-in; }
 .pp-msg { font: 13px "Segoe UI", sans-serif; color: #605e5c; padding: 24px 4px; }
+
+/* The Copilot suggestion in the preview, with arrows to the others */
+.pp-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 2px 4px 6px; padding: 6px 8px; border: 1px solid #d1d1d1; border-radius: 8px; background: #fff; font: 13px "Segoe UI", sans-serif; color: #323130; }
+.pp-bar[hidden] { display: none; }
+.pp-sug { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: auto auto 1fr; column-gap: 6px; align-items: baseline; }
+.pp-spark { color: #6a4ccf; font-size: 12px; }
+.pp-sug b { white-space: nowrap; }
+.pp-place { color: #605e5c; font-size: 12px; white-space: nowrap; }
+.pp-sug small { grid-column: 2 / -1; color: #605e5c; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-step { flex: 0 0 28px; height: 28px; padding: 0; border: 1px solid #d1d1d1; border-radius: 50%; background: #fff; color: #323130; font-size: 18px; line-height: 1; cursor: pointer; }
+.pp-step:hover { border-color: #0f6cbd; color: #0f6cbd; }
+.pp-step:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }

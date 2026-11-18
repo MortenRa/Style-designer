@@ -18,8 +18,10 @@ controladdin "Report Style Full Preview"
 
     event Ready();
     event FullViewRequested();
+    event SuggestionStep(Delta: Integer);
 
     procedure ShowPdf(PdfBase64: Text; Tooltip: Text);
     procedure ShowMessage(Message: Text);
     procedure SetOpenOnClick(Open: Boolean);
+    procedure SetSuggestion(Name: Text; Index: Integer; Count: Integer; Reason: Text);
 }

@@ -1,6 +1,6 @@
 // Page 1 of the preview PDF, drawn with pdf.js at the screen's resolution.
 // A click steps through: whole page -> full width -> larger -> whole page.
-var preview = { page: null, zoom: 0, tooltip: '', opensFull: false };
+var preview = { page: null, zoom: 0, tooltip: '', opensFull: false, suggestion: null };
 var ZOOMS = ['page', 'width', 'large'];
 
 function ShowPdf(pdfBase64, tooltip) {
@@ -37,7 +37,7 @@ function ShowMessage(message) {
 function draw() {
     var page = preview.page;
     if (!page) return;
-    var root = document.getElementById('controlAddIn');
+    var root = body();
     var mode = ZOOMS[preview.zoom];
     var base = page.getViewport({ scale: 1 });
     var boxW = root.clientWidth - 8, boxH = root.clientHeight - 8;
@@ -73,10 +73,64 @@ function draw() {
     });
 }
 
-function replaceContent(node) {
+// The page sits under an optional bar with the Copilot suggestion in the preview and arrows to the others.
+function body() {
     var root = document.getElementById('controlAddIn');
-    root.innerHTML = '';
-    root.appendChild(node);
+    var b = document.getElementById('pp-body');
+    if (!b) {
+        root.innerHTML = '<div id="pp-bar" class="pp-bar" hidden></div><div id="pp-body" class="pp-body"></div>';
+        b = document.getElementById('pp-body');
+        renderBar();
+    }
+    return b;
+}
+
+function replaceContent(node) {
+    var b = body();
+    b.innerHTML = '';
+    b.appendChild(node);
+}
+
+// Count 0 hides the bar. Index 0: none of the suggestions is in the preview yet.
+function SetSuggestion(name, index, count, reason) {
+    preview.suggestion = count > 0 ? { name: name, index: index, count: count, reason: reason } : null;
+    body();
+    renderBar();
+    draw();
+}
+
+function renderBar() {
+    var bar = document.getElementById('pp-bar');
+    if (!bar) return;
+    var s = preview.suggestion;
+    bar.hidden = !s;
+    if (!s) { bar.innerHTML = ''; return; }
+    var label = s.index > 0 ? s.name : 'Copilot suggestions';
+    var place = s.index > 0 ? s.index + ' of ' + s.count : s.count + ' from your last run';
+    bar.innerHTML = '';
+    bar.appendChild(stepButton(-1, 'Previous suggestion', '\u2039'));
+    var text = document.createElement('div');
+    text.className = 'pp-sug';
+    text.title = s.reason || '';
+    text.innerHTML = '<span class="pp-spark">\u2726</span><b></b><span class="pp-place"></span><small></small>';
+    text.querySelector('b').textContent = label;
+    text.querySelector('.pp-place').textContent = place;
+    text.querySelector('small').textContent = s.index > 0 ? (s.reason || '') : 'Use the arrows to see them on your document.';
+    bar.appendChild(text);
+    bar.appendChild(stepButton(1, 'Next suggestion', '\u203a'));
+}
+
+function stepButton(delta, label, glyph) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pp-step';
+    b.textContent = glyph;
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.addEventListener('click', function () {
+        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('SuggestionStep', [delta]);
+    });
+    return b;
 }
 
 window.addEventListener('resize', function () {

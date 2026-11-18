@@ -26,29 +26,6 @@ page 50105 "Report Style Start"
             group(Choices)
             {
                 ShowCaption = false;
-            group(CopilotGroup)
-            {
-                Caption = 'Copilot suggestions';
-                Visible = SuggestionCount > 0;
-
-                field(SuggestionName; SuggestionText)
-                {
-                    ApplicationArea = All;
-                    Caption = 'In the preview';
-                    Editable = false;
-                    Style = Strong;
-                    ToolTip = 'The Copilot suggestion shown in the preview. Use Next suggestion to see the others, or open the designer to compare them side by side.';
-                }
-                field(SuggestionReason; SuggestionReasonText)
-                {
-                    ApplicationArea = All;
-                    ShowCaption = false;
-                    Editable = false;
-                    MultiLine = true;
-                    Style = Subordinate;
-                    ToolTip = 'Why Copilot suggests this theme.';
-                }
-            }
             group(LogoGroup)
             {
                 Caption = 'Your logo';
@@ -266,6 +243,12 @@ page 50105 "Report Style Start"
                         ViewerReady := true;
                         CurrPage.PreviewViewer.SetOpenOnClick(true);
                         ShowMessage(StartTxt);
+                        UpdateSuggestionBar();
+                    end;
+
+                    trigger SuggestionStep(Delta: Integer)
+                    begin
+                        ShowSuggestion(SuggestionIndex + Delta);
                     end;
 
                     trigger FullViewRequested()
@@ -311,14 +294,6 @@ page 50105 "Report Style Start"
         {
             actionref(UpdatePreview_Promoted; UpdatePreviewAction) { }
             actionref(OpenDesigner_Promoted; OpenDesigner) { }
-            group(Suggestions_Promoted)
-            {
-                Caption = 'Copilot suggestions';
-                Visible = SuggestionCount > 1;
-
-                actionref(PreviousSuggestion_Promoted; PreviousSuggestion) { }
-                actionref(NextSuggestion_Promoted; NextSuggestion) { }
-            }
         }
         area(Processing)
         {
@@ -335,32 +310,6 @@ page 50105 "Report Style Start"
                     Rec.Modify(true);
                     Commit();
                     UpdatePreview();
-                end;
-            }
-            action(PreviousSuggestion)
-            {
-                ApplicationArea = All;
-                Caption = 'Previous suggestion';
-                ToolTip = 'Show the previous Copilot suggestion in the preview.';
-                Image = PreviousRecord;
-                Visible = SuggestionCount > 1;
-
-                trigger OnAction()
-                begin
-                    ShowSuggestion(SuggestionIndex - 1);
-                end;
-            }
-            action(NextSuggestion)
-            {
-                ApplicationArea = All;
-                Caption = 'Next suggestion';
-                ToolTip = 'Show the next Copilot suggestion in the preview.';
-                Image = NextRecord;
-                Visible = SuggestionCount > 1;
-
-                trigger OnAction()
-                begin
-                    ShowSuggestion(SuggestionIndex + 1);
                 end;
             }
             action(OpenDesigner)
@@ -394,7 +343,7 @@ page 50105 "Report Style Start"
         TempProposals: Record "Report Style Proposal" temporary;
         SuggestionTxt: Label '%1 (%2 of %3)', Comment = '%1 = theme name, %2 = number, %3 = how many';
         NotInPreviewTxt: Label '%1 suggestions from your last Copilot run. Use Next suggestion to see them.', Comment = '%1 = how many';
-        CreatedTxt: Label 'Copilot made %1 themes. "%2" is in the preview now. Use Next suggestion to see the others, or compare them in the designer.', Comment = '%1 = how many, %2 = theme name';
+        CreatedTxt: Label 'Copilot made %1 themes. "%2" is in the preview now. Use the arrows over the preview to see the others, or compare them in the designer.', Comment = '%1 = how many, %2 = theme name';
         OpenDesignerTxt: Label 'Compare in the designer';
         ReplaceLogoQst: Label 'This replaces the company logo in Company Information. All documents show the new logo right away, without approval. Continue?';
         UnknownThemeErr: Label 'There is no theme called "%1". Choose one from the list.', Comment = '%1 = the name typed';
@@ -529,6 +478,19 @@ page 50105 "Report Style Start"
         end;
     end;
 
+    local procedure UpdateSuggestionBar()
+    var
+        Name: Text;
+    begin
+        if not ViewerReady then
+            exit;
+        if SuggestionIndex > 0 then begin
+            TempProposals.Get(SuggestionIndex);
+            Name := TempProposals.Name;
+        end;
+        CurrPage.PreviewViewer.SetSuggestion(Name, SuggestionIndex, SuggestionCount, SuggestionReasonText);
+    end;
+
     // Tells the user what Copilot made and where to go next, at the top of the page.
     local procedure NotifyCreated()
     var
@@ -559,6 +521,7 @@ page 50105 "Report Style Start"
         ReportStyleCopilot.ApplyProposal(Rec, TempProposals);
         SuggestionText := StrSubstNo(SuggestionTxt, TempProposals.Name, Index, SuggestionCount);
         SuggestionReasonText := TempProposals.Reason;
+        UpdateSuggestionBar();
         RefreshAdvice();
     end;
 
