@@ -45,7 +45,7 @@ function StudioInit(root) {
         '      <button class="rss-pics-add" data-pics-add="1" title="Add your logo, letterhead or photos. Copilot uses their colours and mood; the pictures are not sent.">+ Pictures</button>' +
         '      <input type="file" id="rss-pics-file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" multiple hidden>' +
         '      <label class="rss-design-pick">View <select class="rss-select" id="rss-design">' + designOptions + '</select></label>' +
-        '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until you apply.</div>' +
+        '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until it is approved and activated.</div>' +
         '    </header>' +
         '    <div class="rss-pics" id="rss-pics" hidden></div>' +
         '    <div class="rss-stage" id="rss-stage">' +
@@ -424,13 +424,13 @@ function renderPanel() {
     if (s.applyTo === 'group' && !docGroup) s.applyTo = 'layout';
     var applyBar = '<div class="rss-applybar">' +
         '<div class="rss-summary">' + summaryText() + '</div>' +
-        '<div class="rss-targets">Apply to ' +
+        '<div class="rss-targets">Use on ' +
         '<label class="rss-radio"><input type="radio" name="rss-target" value="layout"' + (s.applyTo !== 'company' && s.applyTo !== 'group' ? ' checked' : '') + '> this document</label>' +
         (docGroup ? '<label class="rss-radio" title="Every Body layout of the ' + docGroup.reports.length + ' reports in this group"><input type="radio" name="rss-target" value="group"' + (s.applyTo === 'group' ? ' checked' : '') + '> all ' + esc(docGroup.caption.toLowerCase()) + ' (' + docGroup.reports.length + ')</label>' : '') +
         '<label class="rss-radio"><input type="radio" name="rss-target" value="company"' + (s.applyTo === 'company' ? ' checked' : '') + '> company default</label></div>' +
         '<div class="rss-apply-actions">' +
-        (s.themeMode === 'custom' ? '<button class="rss-secondary" data-save="theme" title="Saves the theme as a draft. Nothing changes for any report until you choose Apply.">Save as draft</button>' : '') +
-        '<button class="rss-primary" data-save="apply" title="Changes the reports that use this style, so customers receive the new look."' + (nothing ? ' disabled' : '') + '>Apply</button></div>' +
+        (s.themeMode === 'custom' ? '<button class="rss-secondary" data-save="theme" title="Saves the theme as a draft. Nothing changes for any report.">Save as draft</button>' : '') +
+        '<button class="rss-primary" data-save="submit" title="Saves the design and sends it for approval. Customers receive the new look only after it is approved and activated on the Theme Approvals page."' + (nothing ? ' disabled' : '') + '>Send for approval</button></div>' +
         '</div>';
 
     var panel = byId('rss-panel');
@@ -769,7 +769,7 @@ function summaryText() {
     var what = function (mode, custom) { return mode === 'keep' ? 'unchanged' : (mode === 'default' ? 'back to default' : custom); };
     var themeName = s.themeName ? '"' + s.themeName + '"' : 'your custom theme';
     var headerName = s.headerMode === 'design' ? '"' + (s.hfName || 'your design') + '" (designed)' : (s.headerPart ? '"' + partCaption(s.headerPart) + '"' : 'the chosen design');
-    if (s.themeMode === 'keep' && s.headerMode === 'keep') return 'Nothing to apply yet: change the theme or the header/footer.';
+    if (s.themeMode === 'keep' && s.headerMode === 'keep') return 'Nothing to send yet: change the theme or the header/footer.';
     return 'Theme: <b>' + esc(what(s.themeMode, themeName)) + '</b> · Header/footer: <b>' + esc(what(s.headerMode, headerName)) + '</b>';
 }
 /* ---------- table style thumbnails ---------- */

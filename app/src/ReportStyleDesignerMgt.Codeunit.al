@@ -430,9 +430,10 @@ codeunit 50104 "Report Style Designer Mgt."
     end;
 
     /// Saves only what the user chose to change. Mode 'apply' assigns to the Apply To target; 'theme' only stores
-    /// the custom theme as a part without assigning it.
+    /// the custom theme as a part without assigning it; 'submit' stores the parts and sends the design for approval.
     procedure Save(var Config: Record "Report Style Config"; Mode: Text): Text
     var
+        Approvals: Codeunit "Report Style Approvals";
         Generated: Codeunit "Temp Blob";
         Result: TextBuilder;
         LayoutKey: Text[250];
@@ -473,6 +474,13 @@ codeunit 50104 "Report Style Designer Mgt."
         end;
 
         ForCompany := ModeOr(Config."Apply To", 'layout') = 'company';
+        // Send for approval: the parts are saved, nothing is assigned until the request is activated.
+        if Mode = 'submit' then begin
+            if (Config."Apply To" <> 'group') and not ForCompany then
+                ConfiguratorMgt.ValidateBodyLayout(Config);
+            Result.Append(Approvals.Submit(Config));
+            exit(Result.ToText());
+        end;
         if Config."Apply To" = 'group' then begin
             // No group level exists in Business Central: assign every Body layout of the group's reports.
             Result.Append(StrSubstNo('%1 updated (%2 layouts): ', DocGroups.GroupCaption(Config."Apply Group"), ApplyToGroup(Config)));
@@ -567,6 +575,36 @@ codeunit 50104 "Report Style Designer Mgt."
                 Cfg.Delete(true)
             else
                 Cfg.Modify(true);
+    end;
+
+    procedure ThemeModeOf(Config: Record "Report Style Config"): Text
+    begin
+        exit(ThemeMode(Config));
+    end;
+
+    procedure HeaderModeOf(Config: Record "Report Style Config"): Text
+    begin
+        exit(HeaderMode(Config));
+    end;
+
+    procedure GetStateJson(var Config: Record "Report Style Config") Json: Text
+    begin
+        StateFromConfig(Config).WriteTo(Json);
+    end;
+
+    /// Which documents the design is for, in words: one layout, a document group, or the company default.
+    procedure DescribeTarget(Config: Record "Report Style Config"): Text
+    begin
+        if Config."Apply To" = 'group' then
+            exit(StrSubstNo('All %1', LowerCase(DocGroups.GroupCaption(Config."Apply Group"))));
+        if ModeOr(Config."Apply To", 'layout') = 'company' then
+            exit(StrSubstNo('Company default (%1)', CompanyName()));
+        exit(StrSubstNo('%1 (%2), layout %3', GetReportName(Config."Target Report ID"), Config."Target Report ID", Config."Target Layout Name"));
+    end;
+
+    procedure DescribeChange(Config: Record "Report Style Config"): Text
+    begin
+        exit(StrSubstNo('Theme %1, header/footer %2', ModeCaption(ThemeMode(Config)), ModeCaption(HeaderMode(Config))));
     end;
 
     local procedure ModeCaption(Mode: Text): Text

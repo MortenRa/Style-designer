@@ -35,6 +35,11 @@ permissionset 50100 "REPORT STYLE DESIGN"
         codeunit "Report Style Propose Themes" = X,
         codeunit "Report Style Theme Rules" = X,
         codeunit "Report Style Directions" = X,
+        // Designers send designs for approval; changing a request (approve, reject, activate) needs THEME APPROVE.
+        tabledata "Report Style Approval" = RI,
+        table "Report Style Approval" = X,
+        codeunit "Report Style Approvals" = X,
+        page "Report Style Approvals" = X,
         page "Report Style Copilot" = X,
         table "Report Style Proposal" = X;
 }

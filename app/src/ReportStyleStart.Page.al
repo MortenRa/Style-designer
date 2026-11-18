@@ -176,7 +176,7 @@ page 50105 "Report Style Start"
                     Caption = 'Advice';
                     Editable = false;
                     MultiLine = true;
-                    ToolTip = 'Soft recommendations based on the settings. They explain a likely problem; you can still apply the style.';
+                    ToolTip = 'Soft recommendations based on the settings. They explain a likely problem; you can still send the design for approval.';
                 }
             }
             }
@@ -270,8 +270,8 @@ page 50105 "Report Style Start"
             action(OpenDesigner)
             {
                 ApplicationArea = All;
-                Caption = 'Preview and apply';
-                ToolTip = 'See the reports with these choices and apply them. More options are in the designer.';
+                Caption = 'Open designer';
+                ToolTip = 'See your documents with these choices and send the design for approval. More options are in the designer.';
 
                 trigger OnAction()
                 var
