@@ -3,7 +3,7 @@ namespace Abakion.ReportStyleDesigner;
 /// The last Copilot proposals (JSON), kept in their own row so saving them never touches the style configuration.
 table 50104 "Report Style Suggestion"
 {
-    Caption = 'Report Style Suggestion';
+    Caption = 'Theme Designer Suggestion';
     DataClassification = CustomerContent;
 
     fields

@@ -4,7 +4,7 @@ using System.Environment.Configuration;
 
 permissionset 50100 "REPORT STYLE DESIGN"
 {
-    Caption = 'Report Style Designer';
+    Caption = 'Theme Designer';
     Assignable = true;
 
     // The designer stores generated themes and assigns themes and header/footers to reports,

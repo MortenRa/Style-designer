@@ -1,4 +1,4 @@
-/* Report Style Designer: live preview on the left, styling panel on the right.
+/* Theme Designer: live preview on the left, styling panel on the right.
    Every change re-renders a preview for the current user only; nothing is applied until a save button is used. */
 
 var studio = {
@@ -37,7 +37,7 @@ function StudioInit(root) {
         '<div class="rss">' +
         '  <section class="rss-preview">' +
         '    <header class="rss-preview-bar">' +
-        '      <div class="rss-title">Report Style Designer</div>' +
+        '      <div class="rss-title">Theme Designer</div>' +
         '      <div class="rss-view" role="tablist" aria-label="Preview">' +
         '        <button class="on" data-view="single" role="tab" aria-selected="true">This document</button>' +
         '        <button data-view="gallery" role="tab" aria-selected="false">Your documents</button></div>' +

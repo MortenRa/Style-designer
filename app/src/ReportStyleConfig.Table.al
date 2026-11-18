@@ -4,7 +4,7 @@ using System.Reflection;
 
 table 50100 "Report Style Config"
 {
-    Caption = 'Report Style Configuration';
+    Caption = 'Theme Designer Configuration';
     Access = Internal;
     DataClassification = CustomerContent;
 

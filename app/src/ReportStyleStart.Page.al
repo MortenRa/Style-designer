@@ -7,12 +7,12 @@ using System.Utilities;
 /// A standard page, not the designer add-in; only the preview uses a small image box (Report Style Page Preview).
 page 50105 "Report Style Start"
 {
-    Caption = 'Report style';
+    Caption = 'Theme Designer - Quick Start';
     PageType = Card;
     SourceTable = "Report Style Config";
     UsageCategory = Administration;
     ApplicationArea = All;
-    AdditionalSearchTerms = 'report theme, report design, document design, colours, fonts, start';
+    AdditionalSearchTerms = 'report style, report theme, report design, document design, colours, fonts, start';
 
     layout
     {

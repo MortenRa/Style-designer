@@ -4,7 +4,7 @@ namespace Abakion.ReportStyleDesigner;
 /// dialog pops up in the user's session. Rows live only until the designer has picked up the result.
 table 50103 "Report Style Gallery Job"
 {
-    Caption = 'Report Style Gallery Job';
+    Caption = 'Theme Designer Gallery Job';
     Access = Internal;
     DataClassification = CustomerContent;
 

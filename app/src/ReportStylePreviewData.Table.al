@@ -4,7 +4,7 @@ namespace Abakion.ReportStyleDesigner;
 /// document with real data instead of everything the report would print by default.
 table 50102 "Report Style Preview Data"
 {
-    Caption = 'Report Style Preview Data';
+    Caption = 'Theme Designer Preview Data';
     Access = Internal;
     DataClassification = CustomerContent;
 

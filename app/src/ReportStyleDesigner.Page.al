@@ -5,12 +5,12 @@ using System.Utilities;
 
 page 50102 "Report Style Designer"
 {
-    Caption = 'Report Style Designer';
+    Caption = 'Theme Designer';
     // A Card page, not UserControlHost: that page type shows an "Add-in" label above the title.
     PageType = Card;
     UsageCategory = Administration;
     ApplicationArea = All;
-    AdditionalSearchTerms = 'report theme, report design, document design, header, footer, colours, colors, fonts, branding, layout style';
+    AdditionalSearchTerms = 'report style designer, report theme, report design, document design, header, footer, colours, colors, fonts, branding, layout style';
     Editable = false;
 
     layout

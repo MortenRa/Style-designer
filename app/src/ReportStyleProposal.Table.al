@@ -3,7 +3,7 @@ namespace Abakion.ReportStyleDesigner;
 /// A theme proposed by Copilot, already checked by "Report Style Theme Rules".
 table 50101 "Report Style Proposal"
 {
-    Caption = 'Report Style Proposal';
+    Caption = 'Theme Designer Proposal';
     TableType = Temporary;
     DataClassification = SystemMetadata;
 
