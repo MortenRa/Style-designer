@@ -264,7 +264,16 @@ page 50105 "Report Style Start"
                     trigger Ready()
                     begin
                         ViewerReady := true;
+                        CurrPage.PreviewViewer.SetOpenOnClick(true);
                         ShowMessage(StartTxt);
+                    end;
+
+                    trigger FullViewRequested()
+                    var
+                        FullPreview: Page "Report Style Full Preview";
+                    begin
+                        FullPreview.SetPreview(LastPdfBase64, PreviewStatusText);
+                        FullPreview.RunModal();
                     end;
                 }
                 field(PreviewStatus; PreviewStatusText)
@@ -400,7 +409,8 @@ page 50105 "Report Style Start"
         PreviewStatusText: Text;
         ViewerReady: Boolean;
         StartTxt: Label 'Change a choice, or choose Update preview, to see the first page of the document here.';
-        ZoomTipTxt: Label 'Click to zoom: whole page, full width, larger.';
+        ZoomTipTxt: Label 'Click to see the page full size.';
+        LastPdfBase64: Text;
 
     trigger OnOpenPage()
     var
@@ -548,7 +558,8 @@ page 50105 "Report Style Start"
         end;
         Runner.GetPdf(Pdf);
         PreviewStatusText := StrSubstNo(PreviewCaptionTxt, DesignerMgt.GetReportCaption(Rec));
-        CurrPage.PreviewViewer.ShowPdf(Base64Convert.ToBase64(Pdf.CreateInStream()), ZoomTipTxt);
+        LastPdfBase64 := Base64Convert.ToBase64(Pdf.CreateInStream());
+        CurrPage.PreviewViewer.ShowPdf(LastPdfBase64, ZoomTipTxt);
     end;
 
     local procedure ShowMessage(Message: Text)

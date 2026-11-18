@@ -1,6 +1,6 @@
 // Page 1 of the preview PDF, drawn with pdf.js at the screen's resolution.
 // A click steps through: whole page -> full width -> larger -> whole page.
-var preview = { page: null, zoom: 0, tooltip: '' };
+var preview = { page: null, zoom: 0, tooltip: '', opensFull: false };
 var ZOOMS = ['page', 'width', 'large'];
 
 function ShowPdf(pdfBase64, tooltip) {
@@ -18,6 +18,12 @@ function ShowPdf(pdfBase64, tooltip) {
         .then(function (pdf) { return pdf.getPage(1); })
         .then(function (page) { preview.page = page; draw(); })
         .catch(function (e) { ShowMessage(String(e && e.message || e)); });
+}
+
+// On Quick Start a click opens the page full size in its own window instead of zooming in the small box.
+function SetOpenOnClick(open) {
+    preview.opensFull = !!open;
+    draw();
 }
 
 function ShowMessage(message) {
@@ -54,7 +60,12 @@ function draw() {
         box.className = 'pp ' + mode;
         box.title = preview.tooltip;
         box.appendChild(canvas);
+        if (preview.opensFull) box.classList.add('opens');
         box.addEventListener('click', function () {
+            if (preview.opensFull) {
+                Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('FullViewRequested', []);
+                return;
+            }
             preview.zoom = (preview.zoom + 1) % ZOOMS.length;
             draw();
         });

@@ -10,7 +10,7 @@ controladdin "Report Style Page Preview"
     StartupScript = 'addin/pagepreview-startup.js';
     StyleSheets = 'addin/pagepreview.css';
 
-    RequestedHeight = 470;
+    RequestedHeight = 600;
     MinimumHeight = 300;
     VerticalStretch = false;
     VerticalShrink = true;
@@ -18,7 +18,10 @@ controladdin "Report Style Page Preview"
     HorizontalShrink = true;
 
     event Ready();
+    // A click on the page when SetOpenOnClick(true) was called: open it full size.
+    event FullViewRequested();
 
     procedure ShowPdf(PdfBase64: Text; Tooltip: Text);
     procedure ShowMessage(Message: Text);
+    procedure SetOpenOnClick(Open: Boolean);
 }
