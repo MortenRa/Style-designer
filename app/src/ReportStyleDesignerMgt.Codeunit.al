@@ -14,6 +14,7 @@ codeunit 50104 "Report Style Designer Mgt."
         ConfiguratorMgt: Codeunit "Report Style Configurator Mgt.";
         DocGroups: Codeunit "Report Style Doc Groups";
         PreviewPrefixTok: Label 'Preview ', Locked = true;
+        NeutralThemeTok: Label 'DefaultTheme', Locked = true;
         HeaderFooterBaseTok: Label 'ExternalDefaultDetailedHFDesign', Locked = true;
         PreviewBusyErr: Label 'This report is being previewed in another window. Try again in a moment.';
 
@@ -38,6 +39,22 @@ codeunit 50104 "Report Style Designer Mgt."
     begin
         if Store.Get('') then
             Store.Delete();
+    end;
+
+    /// A suggestion or direction replaces colours and fonts only, so it starts from the neutral theme: a theme with its
+    /// own background or fixed colours (Playful) would show through. The user's own theme is kept for "Use my theme".
+    procedure UseNeutralBase(var Config: Record "Report Style Config")
+    var
+        ReportLayoutList: Record "Report Layout List";
+    begin
+        ReportLayoutList.SetRange("Report ID", 2000000001);
+        ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Theme);
+        ReportLayoutList.SetRange(Name, NeutralThemeTok);
+        if ReportLayoutList.IsEmpty() then
+            exit;
+        if (Config."Own Theme" = '') and (Config."Base Theme" <> NeutralThemeTok) then
+            Config."Own Theme" := Config."Base Theme";
+        Config."Base Theme" := NeutralThemeTok;
     end;
 
     procedure GetStoredSuggestions(): Text

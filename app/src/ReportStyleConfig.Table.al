@@ -66,6 +66,8 @@ table 50100 "Report Style Config"
         field(29; Direction; Enum "Report Style Direction") { Caption = 'Design direction'; }
         // Set when the user picked the logo placement; a design direction then keeps it.
         field(30; "Logo Chosen"; Boolean) { Caption = 'Logo placement chosen'; }
+        // The theme the user picked; a Copilot suggestion or design direction starts from the neutral theme instead.
+        field(31; "Own Theme"; Text[250]) { Caption = 'Own theme'; }
     }
 
     keys

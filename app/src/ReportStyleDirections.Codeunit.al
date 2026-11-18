@@ -18,10 +18,13 @@ codeunit 50134 "Report Style Directions"
 
     /// Sets every choice of the direction on the configuration. Not chosen leaves the configuration as it is.
     procedure Apply(var Config: Record "Report Style Config")
+    var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
     begin
         if Config.Direction = Config.Direction::NotChosen then
             exit;
 
+        DesignerMgt.UseNeutralBase(Config);
         Config."Theme Mode" := 'custom';
         Config."Header Mode" := 'design';
         Config."HF Later Pages" := 'minimal';

@@ -104,8 +104,8 @@ page 50105 "Report Style Start"
                 {
                     ApplicationArea = All;
                     Caption = 'Theme';
-                    Visible = not InSuggestion;
-                    ToolTip = 'A theme that already exists in Business Central. Choosing one shows it as it is; the choices below then change it.';
+                    Editable = not InSuggestion;
+                    ToolTip = 'A theme that already exists in Business Central. Choosing one shows it as it is; the choices below then change it. While a Copilot suggestion is the look, the suggestion sets the colours and fonts on the neutral DefaultTheme; choose Use my theme on the preview to come back to your theme.';
 
                     // Our own list with the theme names only, instead of the layout table's technical columns.
                     trigger OnLookup(var Text: Text): Boolean
@@ -133,6 +133,7 @@ page 50105 "Report Style Start"
                         // Shown as it is: the choices below go back to "keep the base theme".
                         LeaveSuggestion();
                         Rec.Direction := Rec.Direction::NotChosen;
+                        Rec."Own Theme" := Rec."Base Theme";
                         Rec."Theme Mode" := 'custom';
                         Rec.Palette := Rec.Palette::KeepBase;
                         Rec."Font Pair" := Rec."Font Pair"::KeepBase;
@@ -144,7 +145,7 @@ page 50105 "Report Style Start"
                 field(Palette; Rec.Palette)
                 {
                     ApplicationArea = All;
-                    Visible = not InSuggestion;
+                    Editable = not InSuggestion;
                     ToolTip = 'The main colours of the reports. "Keep base theme colours" leaves them as they are.';
 
                     trigger OnValidate()
@@ -581,6 +582,9 @@ page 50105 "Report Style Start"
     local procedure UseMyTheme()
     begin
         LeaveSuggestion();
+        if Rec."Own Theme" <> '' then
+            Rec."Base Theme" := Rec."Own Theme";
+        Rec.Direction := Rec.Direction::NotChosen;
         Rec."Theme Mode" := 'custom';
         Rec.Palette := Rec.Palette::KeepBase;
         Rec."Font Pair" := Rec."Font Pair"::KeepBase;

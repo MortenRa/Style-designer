@@ -197,8 +197,10 @@ codeunit 50119 "Report Style Copilot"
     /// Puts a proposal into the designer's draft. The user still previews it and decides whether to apply.
     procedure ApplyProposal(var Config: Record "Report Style Config"; Proposal: Record "Report Style Proposal")
     var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
         FeatureTelemetry: Codeunit "Feature Telemetry";
     begin
+        DesignerMgt.UseNeutralBase(Config);
         Config.Palette := Config.Palette::Custom;
         Config."Custom Colors" := Proposal.Colors;
         Config."Font Pair" := Proposal."Font Pair";

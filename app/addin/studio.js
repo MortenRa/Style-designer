@@ -491,6 +491,8 @@ function applyCandidate(s, c) {
         s.themeName = c.name + ' (copy)';
         return;
     }
+    // Colours and fonts only: start from the neutral theme, so a theme with its own background does not show through.
+    if ((studio.data.themes || []).some(function (t) { return t.name === 'DefaultTheme'; })) s.baseTheme = 'DefaultTheme';
     s.palette = studio.data.copilot.customPalette;
     s.customColors = c.colors.slice();
     s.fonts = c.fonts;
