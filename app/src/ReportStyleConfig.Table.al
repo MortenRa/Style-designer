@@ -52,7 +52,7 @@ table 50100 "Report Style Config"
         field(17; "Apply To"; Text[10]) { Caption = 'Apply to: layout or company'; InitValue = 'layout'; }
         field(18; "Header Part App ID"; Guid) { Caption = 'Header/footer design app'; }
         // "Design your own" header/footer
-        field(19; "HF Logo"; Text[10]) { Caption = 'Logo: right, left or none'; InitValue = 'right'; }
+        field(19; "HF Logo"; Text[10]) { Caption = 'Logo: right, left, center or none'; InitValue = 'right'; }
         field(20; "HF Page Number"; Text[10]) { Caption = 'Page number: header, footer or none'; InitValue = 'header'; }
         field(21; "HF Show Date"; Boolean) { Caption = 'Show date'; InitValue = true; }
         field(22; "HF Later Pages"; Text[10]) { Caption = 'Pages after the first: minimal or same'; InitValue = 'minimal'; }

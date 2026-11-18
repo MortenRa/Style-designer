@@ -45,6 +45,15 @@ codeunit 50118 "Header Footer Generator Checks"
         IsTrue(Count(Generated, FirstHeader, '//w:tr/w:tc[1]//w:sdt[w:sdtPr/w:tag[contains(@w:val,''CompanyLogo'')]]') = 1, 'logo in the first column');
         IsTrue(Validates(Generated), 'logo left rejected');
 
+        Generate('center', 'header', true, 'minimal', 'contact', false, Generated);
+        IsTrue(Count(Generated, FirstHeader, '/*/w:p[1][w:pPr/w:jc/@w:val=''center'']/w:sdt[w:sdtPr/w:tag[contains(@w:val,''CompanyLogo'')]]') = 1, 'logo on its own centred line at the top');
+        IsTrue(Count(Generated, FirstHeader, '//w:tbl//w:sdt[w:sdtPr/w:tag[contains(@w:val,''CompanyLogo'')]]') = 0, 'logo no longer in the header table');
+        IsTrue(Count(Generated, FirstHeader, '//w:tbl//w:sdt[w:sdtPr/w:tag[contains(@w:val,''DateAndTime'')]]') = 1, 'date stays in the header table');
+        IsTrue(Validates(Generated), 'logo center rejected');
+        Generate('center', 'footer', true, 'same', 'bank', true, Generated);
+        IsTrue(Count(Generated, PartOf(Generated, 'header', 'default'), '/*/w:p[1][w:pPr/w:jc/@w:val=''center'']/w:sdt[w:sdtPr/w:tag[contains(@w:val,''CompanyLogo'')]]') = 1, 'centred logo on later pages too (same header)');
+        IsTrue(Validates(Generated), 'formal direction (center, footer, same, bank, accent) rejected');
+
         Generate('right', 'header', false, 'minimal', 'contact', false, Generated);
         IsTrue(CountInParts(Generated, '//w:sdt[w:sdtPr/w:tag[contains(@w:val,''DateAndTime'')]]') = 0, 'date hidden');
 

@@ -699,7 +699,7 @@ function miniSwatches(colors) {
 
 // The logo choice shows the company logo in each position when it is known; otherwise the plain buttons.
 function logoSection() {
-    var options = [['left', 'Left'], ['right', 'Right'], ['none', 'None']];
+    var options = [['left', 'Left'], ['center', 'Center'], ['right', 'Right'], ['none', 'None']];
     var logo = studio.data.copilot && studio.data.copilot.logo;
     if (!logo) return hfSection('Logo', 'hfLogo', options);
     var current = studio.state.hfLogo;

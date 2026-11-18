@@ -11,7 +11,7 @@ codeunit 50134 "Report Style Directions"
         NotChosenTxt: Label 'Choose a direction to set the look and the header and footer in one step. You can change every detail afterwards.';
         ClassicTxt: Label 'Calm and familiar. Cambria headings, grey tones, logo on the right and contact details in the footer. Fits most companies.';
         ModernTxt: Label 'Clean and light. Segoe UI, blue tones, logo on the left and a coloured line under the header. Tables with thin accent lines.';
-        FormalTxt: Label 'Serious and traditional. Georgia headings on warm paper, bank details and page number in the footer. For finance, law and consulting.';
+        FormalTxt: Label 'Serious and traditional. Georgia headings on warm paper, the logo centred above the title, bank details and page number in the footer. For finance, law and consulting.';
         FriendlyTxt: Label 'Warm and open. Warm colours, banded tables, logo on the left and a coloured line under the header. For retail, crafts and hospitality.';
         MinimalTxt: Label 'As little as possible. Grey tones, no footer and no lines. The content speaks for itself.';
 
@@ -41,7 +41,7 @@ codeunit 50134 "Report Style Directions"
             Config.Direction::Formal:
                 begin
                     SetLook(Config, Config."Font Pair"::GeorgiaVerdana, Config.Palette::Graphite, Config."Page Color"::WarmPaper, Config."Table Style"::Minimal);
-                    SetHeaderFooter(Config, 'right', 'footer', 'bank', false);
+                    SetHeaderFooter(Config, 'center', 'footer', 'bank', false);
                 end;
             Config.Direction::Friendly:
                 begin

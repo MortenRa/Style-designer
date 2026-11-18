@@ -256,6 +256,7 @@
 .rss-logo-sheet img { max-height: 100%; max-width: 100%; object-fit: contain; }
 .rss-logo-left { justify-content: flex-start; }
 .rss-logo-right { justify-content: flex-end; }
+.rss-logo-center { justify-content: center; }
 .rss-logo-none { margin: auto; font-size: 11px; color: var(--text); opacity: .6; }
 .rss-logo-cap { font-size: 12px; text-align: center; color: var(--text); }
 

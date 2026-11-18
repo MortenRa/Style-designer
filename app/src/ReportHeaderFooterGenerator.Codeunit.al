@@ -38,7 +38,7 @@ codeunit 50117 "Report Header Footer Generator"
 
     procedure SetLogo(NewLogo: Text)
     begin
-        Logo := NewLogo; // right, left, none
+        Logo := NewLogo; // right, left, center, none
     end;
 
     procedure SetPageNumber(NewPageNumber: Text)
@@ -253,7 +253,7 @@ codeunit 50117 "Report Header Footer Generator"
     begin
         exit((EntryName.StartsWith('word/_rels/header') or EntryName.StartsWith('word/_rels/footer')) and EntryName.EndsWith('.xml.rels'));
     end;
-    // Moves the logo to the first column of its row (left), or removes it (none).
+    // Moves the logo to the first column of its row (left), to its own centred line (center), or removes it (none).
     local procedure PatchLogo(Part: Text)
     var
         Document: XmlDocument;
@@ -274,6 +274,11 @@ codeunit 50117 "Report Header Footer Generator"
             Save(Part, Document);
             exit;
         end;
+        if Logo = 'center' then begin
+            MoveLogoToCenterLine(Document, NamespaceManager, LogoNode);
+            Save(Part, Document);
+            exit;
+        end;
 
         // left: swap the content of the logo's cell with the first cell of the same row
         if not LogoNode.SelectSingleNode('ancestor::w:tc[1]', NamespaceManager, LogoCell) then
@@ -291,6 +296,39 @@ codeunit 50117 "Report Header Footer Generator"
         foreach Paragraph in Paragraphs do
             SetJustification(Paragraph.AsXmlElement(), NamespaceManager, 'right');
         Save(Part, Document);
+    end;
+
+    // center: the logo gets its own centred line at the top of the header, above the title row.
+    // A centred cell on the title row would need a third table column; a line of its own works with any logo width.
+    local procedure MoveLogoToCenterLine(Document: XmlDocument; NamespaceManager: XmlNamespaceManager; LogoNode: XmlNode)
+    var
+        Root: XmlElement;
+        Node: XmlNode;
+        LogoLine: XmlElement;
+        ParagraphProperties: XmlElement;
+        ParagraphStyle: XmlElement;
+        Spacing: XmlElement;
+        Justification: XmlElement;
+    begin
+        Document.GetRoot(Root);
+        LogoLine := XmlElement.Create('p', WordNamespaceTxt);
+        ParagraphProperties := XmlElement.Create('pPr', WordNamespaceTxt);
+        // keep the style of the logo's own paragraph, so the line height matches the rest of the header
+        if LogoNode.SelectSingleNode('ancestor::w:p[1]/w:pPr/w:pStyle/@w:val', NamespaceManager, Node) then begin
+            ParagraphStyle := XmlElement.Create('pStyle', WordNamespaceTxt);
+            ParagraphStyle.SetAttribute('val', WordNamespaceTxt, Node.AsXmlAttribute().Value());
+            ParagraphProperties.Add(ParagraphStyle);
+        end;
+        Spacing := XmlElement.Create('spacing', WordNamespaceTxt);
+        Spacing.SetAttribute('after', WordNamespaceTxt, '120');
+        ParagraphProperties.Add(Spacing);
+        Justification := XmlElement.Create('jc', WordNamespaceTxt);
+        Justification.SetAttribute('val', WordNamespaceTxt, 'center');
+        ParagraphProperties.Add(Justification);
+        LogoLine.Add(ParagraphProperties);
+        LogoNode.Remove();
+        LogoLine.Add(LogoNode);
+        Root.AddFirst(LogoLine);
     end;
 
     local procedure SwapCellParagraphs(CellA: XmlElement; CellB: XmlElement; NamespaceManager: XmlNamespaceManager)
