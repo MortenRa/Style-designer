@@ -187,6 +187,58 @@ page 50105 "Report Style Start"
             group(Layout)
             {
                 Caption = 'Header and footer';
+                // In words, so it is clear the logo comes with a whole header and footer.
+                field(HeaderFooterSummary; HeaderFooterText)
+                {
+                    ApplicationArea = All;
+                    ShowCaption = false;
+                    Editable = false;
+                    MultiLine = true;
+                    Style = Subordinate;
+                    ToolTip = 'What the header and footer of the documents show with these choices.';
+                }
+                field(PageNumber; PageNumberChoice)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Page number';
+                    OptionCaption = 'In the header,In the footer,None';
+                    ToolTip = 'Where the page number goes.';
+
+                    trigger OnValidate()
+                    begin
+                        case PageNumberChoice of
+                            PageNumberChoice::Header:
+                                Rec."HF Page Number" := 'header';
+                            PageNumberChoice::Footer:
+                                Rec."HF Page Number" := 'footer';
+                            PageNumberChoice::None:
+                                Rec."HF Page Number" := 'none';
+                        end;
+                        Rec."Header Mode" := 'design';
+                        RefreshAdvice();
+                    end;
+                }
+                field(Footer; FooterChoice)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Footer';
+                    OptionCaption = 'Contact details,Contact and bank details,No footer';
+                    ToolTip = 'What the footer shows: the company contact details from Company Information, also the bank details, or nothing.';
+
+                    trigger OnValidate()
+                    begin
+                        case FooterChoice of
+                            FooterChoice::Contact:
+                                Rec."HF Footer" := 'contact';
+                            FooterChoice::Bank:
+                                Rec."HF Footer" := 'bank';
+                            FooterChoice::None:
+                                Rec."HF Footer" := 'none';
+                        end;
+                        Rec."Header Mode" := 'design';
+                        RefreshAdvice();
+                    end;
+                }
                 field("HF Show Date"; Rec."HF Show Date")
                 {
                     ApplicationArea = All;
@@ -194,6 +246,7 @@ page 50105 "Report Style Start"
 
                     trigger OnValidate()
                     begin
+                        Rec."Header Mode" := 'design';
                         RefreshAdvice();
                     end;
                 }
@@ -204,6 +257,7 @@ page 50105 "Report Style Start"
 
                     trigger OnValidate()
                     begin
+                        Rec."Header Mode" := 'design';
                         RefreshAdvice();
                     end;
                 }
@@ -396,6 +450,22 @@ page 50105 "Report Style Start"
         AdviceText: Text;
         DirectionText: Text;
         LogoPickerReady: Boolean;
+        HeaderFooterText: Text;
+        PageNumberChoice: Option Header,Footer,None;
+        FooterChoice: Option Contact,Bank,None;
+        HFUnchangedTxt: Label 'Unchanged: the documents keep the header and footer they have today. Choose a logo position, a design direction or one of the options below to design your own.';
+        HFHeaderTxt: Label 'Header: report title%1%2%3.', Comment = '%1 = page number part, %2 = date part, %3 = logo part';
+        HFPageNumberTxt: Label ', page number', Locked = true;
+        HFDateTxt: Label ', date', Locked = true;
+        HFLogoTxt: Label ' and logo (%1)', Comment = '%1 = left, centre or right';
+        HFLaterMinimalTxt: Label 'Later pages: a smaller header.';
+        HFLaterSameTxt: Label 'Later pages: the same header as page 1.';
+        HFFooterContactTxt: Label 'Footer: company contact details%1.', Comment = '%1 = page number part';
+        HFFooterBankTxt: Label 'Footer: company contact and bank details%1.', Comment = '%1 = page number part';
+        HFFooterNoneTxt: Label 'No footer.';
+        HFFooterPageOnlyTxt: Label 'Footer: page number only.';
+        HFFooterPageTxt: Label ' and page number', Locked = true;
+        HFBasedOnTxt: Label 'Built on Microsoft''s External Default Detailed design; fonts and colours follow the theme.';
         InSuggestion: Boolean;
         LookFromText: Text;
         UseOn: Option ThisDocument,Group,Company;
@@ -555,6 +625,71 @@ page 50105 "Report Style Start"
         end;
     end;
 
+    // The header and footer in words, and the options in step with the record (a direction changes them too).
+    local procedure ComputeHeaderFooter()
+    var
+        Lines: TextBuilder;
+        PagePart: Text;
+        DatePart: Text;
+        LogoPart: Text;
+        FooterPage: Text;
+    begin
+        case Rec."HF Page Number" of
+            'footer':
+                PageNumberChoice := PageNumberChoice::Footer;
+            'none':
+                PageNumberChoice := PageNumberChoice::None;
+            else
+                PageNumberChoice := PageNumberChoice::Header;
+        end;
+        case Rec."HF Footer" of
+            'bank':
+                FooterChoice := FooterChoice::Bank;
+            'none':
+                FooterChoice := FooterChoice::None;
+            else
+                FooterChoice := FooterChoice::Contact;
+        end;
+        if Rec."Header Mode" <> 'design' then begin
+            HeaderFooterText := HFUnchangedTxt;
+            exit;
+        end;
+        if PageNumberChoice = PageNumberChoice::Header then
+            PagePart := HFPageNumberTxt;
+        if Rec."HF Show Date" then
+            DatePart := HFDateTxt;
+        case Rec."HF Logo" of
+            'left':
+                LogoPart := StrSubstNo(HFLogoTxt, 'left');
+            'center':
+                LogoPart := StrSubstNo(HFLogoTxt, 'centred above the title');
+            'none':
+                LogoPart := '';
+            else
+                LogoPart := StrSubstNo(HFLogoTxt, 'right');
+        end;
+        Lines.AppendLine(StrSubstNo(HFHeaderTxt, PagePart, DatePart, LogoPart));
+        if Rec."HF Later Pages" = 'same' then
+            Lines.AppendLine(HFLaterSameTxt)
+        else
+            Lines.AppendLine(HFLaterMinimalTxt);
+        if PageNumberChoice = PageNumberChoice::Footer then
+            FooterPage := HFFooterPageTxt;
+        case FooterChoice of
+            FooterChoice::Bank:
+                Lines.AppendLine(StrSubstNo(HFFooterBankTxt, FooterPage));
+            FooterChoice::None:
+                if FooterPage <> '' then
+                    Lines.AppendLine(HFFooterPageOnlyTxt)
+                else
+                    Lines.AppendLine(HFFooterNoneTxt);
+            else
+                Lines.AppendLine(StrSubstNo(HFFooterContactTxt, FooterPage));
+        end;
+        Lines.Append(HFBasedOnTxt);
+        HeaderFooterText := Lines.ToText();
+    end;
+
     // The look comes from the Copilot suggestion in the preview, else a chosen design direction, else the theme.
     local procedure ComputeLookFrom()
     begin
@@ -585,6 +720,8 @@ page 50105 "Report Style Start"
         if Rec."Own Theme" <> '' then
             Rec."Base Theme" := Rec."Own Theme";
         Rec.Direction := Rec.Direction::NotChosen;
+        // A theme cannot be saved under the name of the theme it starts from.
+        Rec."Theme Name" := CopyStr(Rec."Base Theme" + ' (copy)', 1, MaxStrLen(Rec."Theme Name"));
         Rec."Theme Mode" := 'custom';
         Rec.Palette := Rec.Palette::KeepBase;
         Rec."Font Pair" := Rec."Font Pair"::KeepBase;
@@ -711,6 +848,7 @@ page 50105 "Report Style Start"
     begin
         AdviceText := Advice.GetAdviceText(Rec);
         ComputeLookFrom();
+        ComputeHeaderFooter();
         ComputeDirectionText();
     end;
 
