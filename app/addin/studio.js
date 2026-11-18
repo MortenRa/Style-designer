@@ -42,9 +42,12 @@ function StudioInit(root) {
         '        <button class="on" data-view="single" role="tab" aria-selected="true">This document</button>' +
         '        <button data-view="gallery" role="tab" aria-selected="false">Your documents</button></div>' +
         '      <button class="rss-draft" data-draft="1" title="Describe a look and Copilot suggests three themes">' + SPARKLE + 'Draft with Copilot</button>' +
+        '      <button class="rss-pics-add" data-pics-add="1" title="Add your logo, letterhead or photos. Copilot uses their colours and mood; the pictures are not sent.">+ Pictures</button>' +
+        '      <input type="file" id="rss-pics-file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" multiple hidden>' +
         '      <label class="rss-design-pick">View <select class="rss-select" id="rss-design">' + designOptions + '</select></label>' +
         '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until you apply.</div>' +
         '    </header>' +
+        '    <div class="rss-pics" id="rss-pics" hidden></div>' +
         '    <div class="rss-stage" id="rss-stage">' +
         '      <div class="rss-stage-car" id="rss-stage-car" hidden></div>' +
         '      <div class="rss-pages" id="rss-pages"></div>' +
@@ -61,6 +64,12 @@ function StudioInit(root) {
         Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('DraftThemeRequested', []);
     });
     root.querySelector('#rss-design').addEventListener('change', function (e) { setDesignView(+e.target.value); });
+    root.querySelector('[data-pics-add]').addEventListener('click', function () { byId('rss-pics-file').click(); });
+    root.querySelector('#rss-pics-file').addEventListener('change', function (e) { addPictures(e.target.files); e.target.value = ''; });
+    root.querySelector('#rss-pics').addEventListener('click', function (e) {
+        var remove = e.target.closest && e.target.closest('[data-pic-remove]');
+        if (remove) removePicture(+remove.getAttribute('data-pic-remove'));
+    });
     // Delegated, because the panel is redrawn after every change.
     root.addEventListener('click', function (e) {
         if (!e.target.closest) return;
@@ -1399,4 +1408,112 @@ function statusLine() {
     var s = studio.state;
     var name = s.themeMode === 'custom' ? (s.themeName || 'Custom theme') : (s.baseTheme || 'Base theme');
     return '<div class="rss-status">Preview: <b>' + esc(name) + '</b> · not applied yet</div>';
+}
+
+/* ---------- Pictures for Copilot ---------- */
+// The user's own pictures (logo, letterhead, photos) as input for Copilot. Only their main colours and a few
+// mood words go to Business Central; the pictures stay in the browser and are never sent.
+var PICTURES_MAX = 4;
+var pictures = [];   // { name, base64, colors: [hex], traits: { light, sat, warm } }
+
+function addPictures(fileList) {
+    var files = Array.prototype.slice.call(fileList || []).filter(function (f) { return /^image\//.test(f.type); });
+    var room = PICTURES_MAX - pictures.length;
+    if (files.length > room) Notify('Copilot uses up to ' + PICTURES_MAX + ' pictures. The first ' + Math.max(room, 0) + ' were added.', 'info');
+    files.slice(0, Math.max(room, 0)).forEach(function (file) {
+        var reader = new FileReader();
+        reader.onload = function () {
+            var base64 = String(reader.result).split(',')[1] || '';
+            Promise.all([logoColors(base64), pictureTraits(base64)]).then(function (res) {
+                if (!res[1]) { Notify(file.name + ' could not be read as a picture.', 'error'); return; }
+                pictures.push({ name: file.name, base64: base64, colors: res[0], traits: res[1] });
+                picturesChanged();
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function removePicture(index) {
+    pictures.splice(index, 1);
+    picturesChanged();
+}
+
+function picturesChanged() {
+    renderPictures();
+    var input = pictures.length ? { count: pictures.length, colors: pictureColors(), mood: pictureMood() } : { count: 0, colors: [], mood: '' };
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('PictureInputChanged', [JSON.stringify(input)]);
+}
+
+function renderPictures() {
+    var strip = byId('rss-pics');
+    strip.hidden = pictures.length === 0;
+    if (!pictures.length) { strip.innerHTML = ''; return; }
+    var thumbs = pictures.map(function (p, i) {
+        return '<span class="rss-pic" title="' + esc(p.name) + '"><img src="data:' + imageType(p.base64) + ';base64,' + p.base64 + '" alt="">' +
+            '<button class="rss-pic-x" data-pic-remove="' + i + '" title="Remove ' + esc(p.name) + '" aria-label="Remove ' + esc(p.name) + '">×</button></span>';
+    }).join('');
+    var swatches = pictureColors().map(function (hex) { return '<span class="rss-pic-sw" style="background:#' + hex + '" title="#' + hex + '"></span>'; }).join('');
+    strip.innerHTML = '<span class="rss-pics-label">Pictures for Copilot</span>' + thumbs +
+        '<span class="rss-pics-read">' + swatches + '<span>' + esc(pictureMood()) + '</span></span>' +
+        '<span class="rss-pics-note">Copilot uses their colours and mood. The pictures are not sent.</span>';
+}
+
+// Up to 6 colours over all pictures, most used first, without near duplicates.
+function pictureColors() {
+    var out = [];
+    var rgb = function (hex) { return [parseInt(hex.substr(0, 2), 16), parseInt(hex.substr(2, 2), 16), parseInt(hex.substr(4, 2), 16)]; };
+    var maxLen = Math.max.apply(null, pictures.map(function (p) { return p.colors.length; }).concat(0));
+    for (var i = 0; i < maxLen; i++) {
+        pictures.forEach(function (p) {
+            var hex = p.colors[i];
+            if (!hex || out.length >= 6) return;
+            var c = rgb(hex);
+            var near = out.some(function (o) { var d = rgb(o); return Math.abs(d[0] - c[0]) + Math.abs(d[1] - c[1]) + Math.abs(d[2] - c[2]) < 90; });
+            if (!near) out.push(hex);
+        });
+    }
+    return out;
+}
+
+// A few plain words for the overall feel of the pictures: light or dark, muted or colourful, warm or cool.
+function pictureMood() {
+    if (!pictures.length) return '';
+    var avg = function (key) { return pictures.reduce(function (s, p) { return s + p.traits[key]; }, 0) / pictures.length; };
+    var light = avg('light'), sat = avg('sat'), warm = avg('warm'), words = [];
+    if (light > 0.65) words.push('light'); else if (light < 0.35) words.push('dark');
+    if (sat < 0.2) words.push('muted'); else if (sat > 0.45) words.push('colourful');
+    if (warm > 0.06) words.push('warm'); else if (warm < -0.06) words.push('cool');
+    return words.length ? words.join(', ') : 'balanced';
+}
+
+// Average lightness, saturation and warmth (red minus blue) of a picture, from a 64-pixel copy.
+function pictureTraits(base64) {
+    return new Promise(function (resolve) {
+        var img = new Image();
+        img.onerror = function () { resolve(null); };
+        img.onload = function () {
+            try {
+                var size = 64, canvas = document.createElement('canvas');
+                var scale = Math.min(size / img.width, size / img.height, 1);
+                canvas.width = Math.max(1, Math.round(img.width * scale));
+                canvas.height = Math.max(1, Math.round(img.height * scale));
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                var px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                var n = 0, light = 0, sat = 0, warm = 0;
+                for (var i = 0; i < px.length; i += 4) {
+                    if (px[i + 3] < 128) continue;
+                    var r = px[i] / 255, g = px[i + 1] / 255, b = px[i + 2] / 255;
+                    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+                    light += (max + min) / 2;
+                    sat += max === 0 ? 0 : (max - min) / max;
+                    warm += r - b;
+                    n++;
+                }
+                resolve(n ? { light: light / n, sat: sat / n, warm: warm / n } : null);
+            } catch (e) { resolve(null); }
+        };
+        img.src = 'data:' + imageType(base64) + ';base64,' + base64;
+    });
 }

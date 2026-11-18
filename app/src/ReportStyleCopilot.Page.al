@@ -19,8 +19,8 @@ page 50103 "Report Style Copilot"
             field(ColourChoice; ColourChoice)
             {
                 Caption = 'Colours';
-                OptionCaption = 'Our brand and logo,Let Copilot choose,Blues,Greens,Warm tones,Neutral greys';
-                ToolTip = 'Which colours Copilot builds the themes on. "Our brand and logo" uses the company brand colour and the main colours of the company logo (the logo itself is not sent). Colours you name in the description always win.';
+                OptionCaption = 'Our brand, logo and pictures,Let Copilot choose,Blues,Greens,Warm tones,Neutral greys';
+                ToolTip = 'Which colours Copilot builds the themes on. "Our brand, logo and pictures" uses the company brand colour and the main colours of the company logo and of the pictures added in the designer. Only the colours and a few mood words are sent, never the pictures. Colours you name in the description always win.';
             }
             field(BackgroundChoice; BackgroundChoice)
             {
@@ -105,7 +105,7 @@ page 50103 "Report Style Copilot"
                             ReportStyleCopilot.SetBackground(0);
                     end;
                     ReportStyleCopilot.SetProposalCount(ProposalCountNumber());
-                    ReportStyleCopilot.Generate(UserPrompt, ReportName, ColoursForCopilot(), Proposals);
+                    ReportStyleCopilot.Generate(PromptForCopilot(), ReportName, ColoursForCopilot(), Proposals);
                     // The designer is the place to compare them: real preview, real swatches.
                     CurrPage.Close();
                 end;
@@ -152,6 +152,9 @@ page 50103 "Report Style Copilot"
         GreensTxt: Label 'greens (forest green, sage, teal)', Locked = true;
         WarmTxt: Label 'warm tones (terracotta, amber, sand)', Locked = true;
         NeutralTxt: Label 'neutral greys (charcoal, slate, stone)', Locked = true;
+        PictureMood: Text;
+        PictureMoodTxt: Label 'The customer added %1 of their own pictures (logo, letterhead or photos). They feel %2; let the themes match that mood.', Comment = '%1 = number of pictures, %2 = mood words such as light, muted, warm', Locked = true;
+        PictureCount: Integer;
     /// Context from the designer: the report being styled and the colours read from the logo (JSON array of hex).
     /// The colour field starts with the brand colour and the logo colours; the user can change it freely.
     procedure SetContext(NewReportName: Text; LogoColors: Text)
@@ -187,6 +190,39 @@ page 50103 "Report Style Copilot"
         if Colours <> '' then
             Colours += ', ';
         Colours += Rules.ColourName(Normalized) + ' (#' + Normalized + ')';
+    end;
+
+    /// The user's own pictures from the designer, as JSON {count, colors, mood}: their colours join the colour field,
+    /// and the mood words go into the prompt. The pictures themselves are never sent.
+    procedure SetPictures(PictureInput: Text)
+    var
+        Input: JsonObject;
+        Token: JsonToken;
+        Color: JsonToken;
+    begin
+        PictureCount := 0;
+        PictureMood := '';
+        if not Input.ReadFrom(PictureInput) then
+            exit;
+        if Input.Get('count', Token) then
+            PictureCount := Token.AsValue().AsInteger();
+        if PictureCount = 0 then
+            exit;
+        if Input.Get('mood', Token) then
+            PictureMood := Token.AsValue().AsText();
+        if Input.Get('colors', Token) then
+            foreach Color in Token.AsArray() do
+                if Color.IsValue() then
+                    AddColour(Color.AsValue().AsText());
+        if Colours <> '' then
+            ColourChoice := ColourChoice::BrandLogo;
+    end;
+
+    local procedure PromptForCopilot(): Text
+    begin
+        if PictureMood = '' then
+            exit(UserPrompt);
+        exit(UserPrompt + ' ' + StrSubstNo(PictureMoodTxt, PictureCount, PictureMood));
     end;
 
     local procedure ColoursForCopilot(): Text
