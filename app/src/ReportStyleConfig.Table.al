@@ -14,8 +14,6 @@ table 50100 "Report Style Config"
         field(2; "Base Theme"; Text[250])
         {
             Caption = 'Base theme';
-            TableRelation = "Report Layout List".Name where("Report ID" = const(2000000001), "Layout Subtype" = const(Theme));
-            ValidateTableRelation = false;
         }
         field(3; "Theme Name"; Text[250])
         {

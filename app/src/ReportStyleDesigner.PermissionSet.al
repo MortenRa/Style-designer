@@ -42,6 +42,7 @@ permissionset 50100 "REPORT STYLE DESIGN"
         codeunit "Report Style Notifications" = X,
         codeunit "Report Style Image Colors" = X,
         page "Report Style Approvals" = X,
+        page "Report Style Themes" = X,
         page "Report Style Copilot" = X,
         table "Report Style Proposal" = X;
 }

@@ -1,5 +1,6 @@
 namespace Abakion.ReportStyleDesigner;
 
+using System.Reflection;
 using System.Text;
 using System.Utilities;
 
@@ -119,8 +120,29 @@ page 50105 "Report Style Start"
                     Caption = 'Theme';
                     ToolTip = 'A theme that already exists in Business Central. Choosing one shows it as it is; the choices below then change it.';
 
-                    trigger OnValidate()
+                    // Our own list with the theme names only, instead of the layout table's technical columns.
+                    trigger OnLookup(var Text: Text): Boolean
+                    var
+                        Themes: Page "Report Style Themes";
+                        ReportLayoutList: Record "Report Layout List";
                     begin
+                        Themes.LookupMode(true);
+                        if Themes.RunModal() <> Action::LookupOK then
+                            exit(false);
+                        Themes.GetRecord(ReportLayoutList);
+                        Text := ReportLayoutList.Name;
+                        exit(true);
+                    end;
+
+                    trigger OnValidate()
+                    var
+                        ReportLayoutList: Record "Report Layout List";
+                    begin
+                        ReportLayoutList.SetRange("Report ID", 2000000001);
+                        ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Theme);
+                        ReportLayoutList.SetRange(Name, Rec."Base Theme");
+                        if ReportLayoutList.IsEmpty() then
+                            Error(UnknownThemeErr, Rec."Base Theme");
                         // Shown as it is: the choices below go back to "keep the base theme".
                         Rec."Theme Mode" := 'custom';
                         Rec.Palette := Rec.Palette::KeepBase;
@@ -280,7 +302,6 @@ page 50105 "Report Style Start"
         {
             actionref(UpdatePreview_Promoted; UpdatePreviewAction) { }
             actionref(OpenDesigner_Promoted; OpenDesigner) { }
-            actionref(UploadLogo_Promoted; UploadLogoAction) { }
             group(Suggestions_Promoted)
             {
                 Caption = 'Copilot suggestions';
@@ -333,18 +354,6 @@ page 50105 "Report Style Start"
                     ShowSuggestion(SuggestionIndex + 1);
                 end;
             }
-            action(UploadLogoAction)
-            {
-                ApplicationArea = All;
-                Caption = 'Upload logo';
-                ToolTip = 'Upload the company logo. It is saved in Company Information and used on all documents.';
-                Image = Import;
-
-                trigger OnAction()
-                begin
-                    UploadLogo();
-                end;
-            }
             action(OpenDesigner)
             {
                 ApplicationArea = All;
@@ -378,6 +387,7 @@ page 50105 "Report Style Start"
         CreatedTxt: Label 'Copilot made %1 themes. "%2" is in the preview now. Use Next suggestion to see the others, or compare them in the designer.', Comment = '%1 = how many, %2 = theme name';
         OpenDesignerTxt: Label 'Compare in the designer';
         ReplaceLogoQst: Label 'This replaces the company logo in Company Information. All documents show the new logo right away, without approval. Continue?';
+        UnknownThemeErr: Label 'There is no theme called "%1". Choose one from the list.', Comment = '%1 = the name typed';
         NoLogoTxt: Label 'Your company has no logo in Company Information yet. Upload one to see it on your documents.';
         UploadTitleTxt: Label 'Upload logo';
         ImageFilterTxt: Label 'Images (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp', Locked = true;

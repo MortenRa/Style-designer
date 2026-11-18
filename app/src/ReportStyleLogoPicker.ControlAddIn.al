@@ -8,8 +8,8 @@ controladdin "Report Style Logo Picker"
     StartupScript = 'addin/logopicker-startup.js';
     StyleSheets = 'addin/logopicker.css';
 
-    RequestedHeight = 210;
-    MinimumHeight = 150;
+    RequestedHeight = 140;
+    MinimumHeight = 110;
     VerticalStretch = false;
     VerticalShrink = true;
     HorizontalStretch = true;
