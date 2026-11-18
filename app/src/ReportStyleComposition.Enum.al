@@ -1,16 +1,16 @@
 namespace Abakion.ReportStyleDesigner;
 
-/// Draft compositions for the start page: each sets the header/footer design fields in one step.
-/// The five archetypes are not defined in the repo yet; these are placeholders to review with the design team.
-enum 50105 "Report Style Composition"
+/// The design directions (archetypes): each sets the look and the header/footer in one step.
+/// Draft for the design team to review; the values are set in "Report Style Directions".
+enum 50105 "Report Style Direction"
 {
     Extensible = false;
 
-    // Blank: nothing is changed; the header/footer fields keep their values.
+    // Nothing is changed; the current choices stay.
     value(0; NotChosen) { Caption = 'Not chosen'; }
-    value(1; Standard) { Caption = 'Standard - logo right and page number in header'; }
-    value(2; LogoLeft) { Caption = 'Logo left and accent line under header'; }
-    value(3; BankFooter) { Caption = 'Logo right and page number in footer with bank details'; }
-    value(4; NoDate) { Caption = 'Logo right and no date'; }
-    value(5; Minimal) { Caption = 'Minimal - no footer and accent line'; }
+    value(1; Classic) { Caption = 'Classic'; }
+    value(2; Modern) { Caption = 'Modern'; }
+    value(3; Formal) { Caption = 'Formal'; }
+    value(4; Friendly) { Caption = 'Friendly'; }
+    value(5; Minimal) { Caption = 'Minimal'; }
 }

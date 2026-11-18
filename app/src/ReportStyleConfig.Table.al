@@ -65,7 +65,7 @@ table 50100 "Report Style Config"
         field(27; "Custom Page Color"; Text[10]) { Caption = 'Custom page colour'; }
         // With Apply To = group: customer, vendor or internal (see "Report Style Doc Groups").
         field(28; "Apply Group"; Text[20]) { Caption = 'Apply to group'; }
-        field(29; Composition; Enum "Report Style Composition") { Caption = 'Composition (draft)'; }
+        field(29; Direction; Enum "Report Style Direction") { Caption = 'Design direction'; }
     }
 
     keys

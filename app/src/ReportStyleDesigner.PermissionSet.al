@@ -34,6 +34,7 @@ permissionset 50100 "REPORT STYLE DESIGN"
         codeunit "Report Style Copilot" = X,
         codeunit "Report Style Propose Themes" = X,
         codeunit "Report Style Theme Rules" = X,
+        codeunit "Report Style Directions" = X,
         page "Report Style Copilot" = X,
         table "Report Style Proposal" = X;
 }

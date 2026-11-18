@@ -28,6 +28,6 @@ Publish "$R\out\ReportStyleDesignerTools.app"
 'published'
 
 if (-not $SkipChecks) {
-    Import-Module 'C:\depot\Platform-Core\out\platform\libMgmt\Debug\Microsoft.Dynamics.Nav.Management.psm1' -WarningAction SilentlyContinue
+    Import-Module 'C:\depot\Platform-Core\out\platform\libMgmt\Release\Microsoft.Dynamics.Nav.Management.psm1' -WarningAction SilentlyContinue
     try { Invoke-NAVCodeunit -ServerInstance PlatformCore -CompanyName 'CRONUS International Ltd.' -CodeunitId 50101 -ErrorAction Stop } catch { 'ERR: ' + ($_.Exception.Message -split "`n")[0] }
 }

@@ -25,6 +25,33 @@ page 50105 "Report Style Start"
             group(Choices)
             {
                 ShowCaption = false;
+            group(DirectionGroup)
+            {
+                Caption = 'Design direction';
+                field(Direction; Rec.Direction)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Direction';
+                    ToolTip = 'A finished look to start from. It sets the colours, fonts, tables, header and footer in one step. You can change every detail below.';
+
+                    trigger OnValidate()
+                    var
+                        Directions: Codeunit "Report Style Directions";
+                    begin
+                        Directions.Apply(Rec);
+                        RefreshAdvice();
+                    end;
+                }
+                field(DirectionDescription; DirectionText)
+                {
+                    ApplicationArea = All;
+                    ShowCaption = false;
+                    Editable = false;
+                    MultiLine = true;
+                    Style = Subordinate;
+                    ToolTip = 'What the chosen direction looks like.';
+                }
+            }
             group(Look)
             {
                 Caption = 'Look';
@@ -89,18 +116,6 @@ page 50105 "Report Style Start"
             group(Layout)
             {
                 Caption = 'Header and footer';
-                field(Composition; Rec.Composition)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Composition (draft)';
-                    ToolTip = 'Sets the logo, page number and footer in one step. The designer can change each of them.';
-
-                    trigger OnValidate()
-                    begin
-                        ApplyComposition();
-                        RefreshAdvice();
-                    end;
-                }
                 field("HF Show Date"; Rec."HF Show Date")
                 {
                     ApplicationArea = All;
@@ -229,6 +244,7 @@ page 50105 "Report Style Start"
 
     var
         AdviceText: Text;
+        DirectionText: Text;
         DocumentText: Text;
         PreviewCaptionTxt: Label '%1 · page 1 · not applied yet', Comment = '%1 = report name';
         DocumentTxt: Label '%1 (%2) · layout %3', Comment = '%1 = report name, %2 = report ID, %3 = layout name';
@@ -295,6 +311,14 @@ page 50105 "Report Style Start"
         Advice: Codeunit "Report Style Advice";
     begin
         AdviceText := Advice.GetAdviceText(Rec);
+        ComputeDirectionText();
+    end;
+
+    local procedure ComputeDirectionText()
+    var
+        Directions: Codeunit "Report Style Directions";
+    begin
+        DirectionText := Directions.Describe(Rec.Direction);
     end;
 
     // After a change the page must be redrawn, or a non-source field keeps its old text.
@@ -305,56 +329,5 @@ page 50105 "Report Style Start"
         Commit();
         UpdatePreview();
         CurrPage.Update(false);
-    end;
-
-    local procedure ApplyComposition()
-    begin
-        if Rec.Composition = Rec.Composition::NotChosen then
-            exit;
-        Rec."Header Mode" := 'design';
-        Rec."HF Later Pages" := 'minimal';
-        case Rec.Composition of
-            Rec.Composition::Standard:
-                begin
-                    Rec."HF Logo" := 'right';
-                    Rec."HF Page Number" := 'header';
-                    Rec."HF Footer" := 'contact';
-                    Rec."HF Show Date" := true;
-                    Rec."HF Accent Line" := false;
-                end;
-            Rec.Composition::LogoLeft:
-                begin
-                    Rec."HF Logo" := 'left';
-                    Rec."HF Page Number" := 'header';
-                    Rec."HF Footer" := 'contact';
-                    Rec."HF Show Date" := true;
-                    Rec."HF Accent Line" := true;
-                end;
-            Rec.Composition::BankFooter:
-                begin
-                    Rec."HF Logo" := 'right';
-                    Rec."HF Page Number" := 'footer';
-                    Rec."HF Footer" := 'bank';
-                    Rec."HF Show Date" := true;
-                    Rec."HF Accent Line" := false;
-                end;
-            Rec.Composition::NoDate:
-                begin
-                    Rec."HF Logo" := 'right';
-                    Rec."HF Page Number" := 'header';
-                    Rec."HF Footer" := 'contact';
-                    Rec."HF Show Date" := false;
-                    Rec."HF Accent Line" := false;
-                end;
-            Rec.Composition::Minimal:
-                begin
-                    Rec."HF Logo" := 'right';
-                    Rec."HF Page Number" := 'header';
-                    Rec."HF Footer" := 'none';
-                    Rec."HF Show Date" := true;
-                    Rec."HF Accent Line" := true;
-                end;
-        end;
-        Rec.Modify(true);
     end;
 }
