@@ -28,7 +28,11 @@ codeunit 50141 "Image Color Checks"
         Check(HasNear(Colors, '1F3A93') and HasNear(Colors, 'E0A526'), 'navy and gold on transparent (got ' + Join(Colors) + ')');
 
         Check(not Analyse('bm90IGEgcGljdHVyZQ==', Colors, Mood), 'a file that is not a picture is refused');
-        Message('IMAGE COLOR CHECKS PASSED: %1 (mood on white: %2)', Passed, Mood);
+        // The colours of an attached picture lead: the first colour of the preference drives the themes.
+        Check(ProposalsUse('amber (#E0A526), navy (#1F3A93)', 'E0A526'), 'the themes are built on the first preferred colour (amber)');
+        Check(ProposalsUse('navy (#1F3A93), amber (#E0A526)', '1F3A93'), 'the themes are built on the first preferred colour (navy)');
+
+        Message('IMAGE COLOR CHECKS PASSED: %1', Passed);
     end;
 
     local procedure Analyse(Base64: Text; var Colors: List of [Text]; var Mood: Text): Boolean
@@ -67,6 +71,20 @@ codeunit 50141 "Image Color Checks"
     local procedure Channel(HexColor: Text; Start: Integer): Integer
     begin
         exit(StrPos('0123456789ABCDEF', CopyStr(HexColor, Start, 1)) * 16 + StrPos('0123456789ABCDEF', CopyStr(HexColor, Start + 1, 1)) - 17);
+    end;
+
+    local procedure ProposalsUse(Colours: Text; Hex: Text): Boolean
+    var
+        TempProposal: Record "Report Style Proposal" temporary;
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
+        Rules: Codeunit "Report Style Theme Rules";
+    begin
+        ReportStyleCopilot.SetProposalCount(3);
+        ReportStyleCopilot.Generate('', 'Sales - Invoice', Colours, TempProposal);
+        if not TempProposal.FindFirst() then
+            exit(false);
+        // The theme is named after its colour ("Soft amber"); its colours may be adjusted for contrast.
+        exit(StrPos(LowerCase(TempProposal.Name), LowerCase(Rules.ColourName(Hex))) > 0);
     end;
 
     local procedure Join(Colors: List of [Text]) Result: Text

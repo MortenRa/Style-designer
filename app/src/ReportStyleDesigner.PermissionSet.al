@@ -39,6 +39,8 @@ permissionset 50100 "REPORT STYLE DESIGN"
         tabledata "Report Style Approval" = RI,
         table "Report Style Approval" = X,
         codeunit "Report Style Approvals" = X,
+        codeunit "Report Style Notifications" = X,
+        codeunit "Report Style Image Colors" = X,
         page "Report Style Approvals" = X,
         page "Report Style Copilot" = X,
         table "Report Style Proposal" = X;

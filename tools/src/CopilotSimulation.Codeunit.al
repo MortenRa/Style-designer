@@ -17,16 +17,16 @@ codeunit 50125 "Copilot Simulation"
     end;
 
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Report Style Copilot", 'OnBeforeGenerate', '', false, false)]
-    local procedure SimulateGenerate(UserPrompt: Text; Kept: Integer; Wanted: Integer; var ArgumentsText: Text; var Handled: Boolean)
+    local procedure SimulateGenerate(UserPrompt: Text; Colours: Text; Kept: Integer; Wanted: Integer; var ArgumentsText: Text; var Handled: Boolean)
     begin
         // The real service takes seconds; an instant answer races the dialog's generating animation.
         Sleep(2500);
         if ShortBy > 0 then begin
             // A short answer, as the real service may give: fewer themes and no extra.
-            ArgumentsText := ArgumentsFor(UserPrompt, Kept, Wanted - ShortBy, false);
+            ArgumentsText := ArgumentsFor(UserPrompt, Colours, Kept, Wanted - ShortBy, false);
             ShortBy := 0;
         end else
-            ArgumentsText := ArgumentsFor(UserPrompt, Kept, Wanted, true);
+            ArgumentsText := ArgumentsFor(UserPrompt, Colours, Kept, Wanted, true);
         Handled := true;
     end;
 
@@ -45,6 +45,13 @@ codeunit 50125 "Copilot Simulation"
     /// Like the real model, follows a colour named in the request ("pink", "lyserød", ...); otherwise the fixed set.
     /// Skip themes already given, then Wanted themes, then (WithExtra) one theme too many that must be cut.
     procedure ArgumentsFor(UserPrompt: Text; Skip: Integer; Wanted: Integer; WithExtra: Boolean): Text
+    begin
+        exit(ArgumentsFor(UserPrompt, '', Skip, Wanted, WithExtra));
+    end;
+
+    /// Like the real model: a colour named in the request wins; otherwise the first colour of the colour preference
+    /// (attached pictures come first there); otherwise the fixed set.
+    procedure ArgumentsFor(UserPrompt: Text; Colours: Text; Skip: Integer; Wanted: Integer; WithExtra: Boolean): Text
     var
         Rules: Codeunit "Report Style Theme Rules";
         Pool: List of [Text];
@@ -64,6 +71,10 @@ codeunit 50125 "Copilot Simulation"
                 Word := Words.Get(Index);
                 Hex := Hexes.Get(Index);
             end;
+        if (Hex = '') and (StrPos(Colours, '#') > 0) then begin
+            Hex := CopyStr(Colours, StrPos(Colours, '#') + 1, 6);
+            Word := Rules.ColourName(Hex);
+        end;
         if Hex = '' then
             CannedPool(Pool)
         else begin

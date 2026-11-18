@@ -25,6 +25,29 @@ page 50105 "Report Style Start"
             group(Choices)
             {
                 ShowCaption = false;
+            group(CopilotGroup)
+            {
+                Caption = 'Copilot suggestions';
+                Visible = SuggestionCount > 0;
+
+                field(SuggestionName; SuggestionText)
+                {
+                    ApplicationArea = All;
+                    Caption = 'In the preview';
+                    Editable = false;
+                    Style = Strong;
+                    ToolTip = 'The Copilot suggestion shown in the preview. Use Next suggestion to see the others, or open the designer to compare them side by side.';
+                }
+                field(SuggestionReason; SuggestionReasonText)
+                {
+                    ApplicationArea = All;
+                    ShowCaption = false;
+                    Editable = false;
+                    MultiLine = true;
+                    Style = Subordinate;
+                    ToolTip = 'Why Copilot suggests this theme.';
+                }
+            }
             group(LogoGroup)
             {
                 Caption = 'Your logo';
@@ -57,28 +80,6 @@ page 50105 "Report Style Start"
                     begin
                         LogoColorsJson := Colors;
                     end;
-                }
-            }
-            group(CopilotGroup)
-            {
-                Caption = 'Copilot suggestions';
-                Visible = SuggestionCount > 0;
-
-                field(SuggestionName; SuggestionText)
-                {
-                    ApplicationArea = All;
-                    Caption = 'In the preview';
-                    Editable = false;
-                    ToolTip = 'The Copilot suggestion shown in the preview. Use Next suggestion to see the others, or open the designer to compare them side by side.';
-                }
-                field(SuggestionReason; SuggestionReasonText)
-                {
-                    ApplicationArea = All;
-                    ShowCaption = false;
-                    Editable = false;
-                    MultiLine = true;
-                    Style = Subordinate;
-                    ToolTip = 'Why Copilot suggests this theme.';
                 }
             }
             group(DirectionGroup)
@@ -374,6 +375,8 @@ page 50105 "Report Style Start"
         SuggestionReasonText: Text;
         TempProposals: Record "Report Style Proposal" temporary;
         SuggestionTxt: Label '%1 (%2 of %3)', Comment = '%1 = theme name, %2 = number, %3 = how many';
+        CreatedTxt: Label 'Copilot made %1 themes. "%2" is in the preview now. Use Next suggestion to see the others, or compare them in the designer.', Comment = '%1 = how many, %2 = theme name';
+        OpenDesignerTxt: Label 'Compare in the designer';
         ReplaceLogoQst: Label 'This replaces the company logo in Company Information. All documents show the new logo right away, without approval. Continue?';
         NoLogoTxt: Label 'Your company has no logo in Company Information yet. Upload one to see it on your documents.';
         UploadTitleTxt: Label 'Upload logo';
@@ -471,6 +474,20 @@ page 50105 "Report Style Start"
         DesignerMgt.SaveSuggestions(ReportStyleCopilot.ProposalsToJson(TempProposals));
         SuggestionCount := TempProposals.Count();
         ShowSuggestion(1);
+        NotifyCreated();
+    end;
+
+    // Tells the user what Copilot made and where to go next, at the top of the page.
+    local procedure NotifyCreated()
+    var
+        Created: Notification;
+    begin
+        Created.Id := '6f2b6d5e-0c3a-4d7e-9a51-3b9f1d2c7e40';
+        Created.Recall();
+        Created.Message(StrSubstNo(CreatedTxt, SuggestionCount, TempProposals.Name));
+        Created.Scope := NotificationScope::LocalScope;
+        Created.AddAction(OpenDesignerTxt, Codeunit::"Report Style Notifications", 'OpenDesigner');
+        Created.Send();
     end;
 
     local procedure ShowSuggestion(Index: Integer)

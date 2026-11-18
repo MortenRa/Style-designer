@@ -146,11 +146,6 @@ page 50102 "Report Style Designer"
                 begin
                     LogoColorsJson := Colors;
                 end;
-
-                trigger PictureInputChanged(Input: Text)
-                begin
-                    PictureInputJson := Input;
-                end;
             }
         }
     }
@@ -197,7 +192,6 @@ page 50102 "Report Style Designer"
         Suggestions: Text;
         GalleryBatchID: Guid;
         LogoColorsJson: Text;
-        PictureInputJson: Text;
         CopilotAvailable: Boolean;
 
     /// Opens the Copilot dialog for the current draft (the add-in saves it with every preview) and puts the
@@ -210,7 +204,6 @@ page 50102 "Report Style Designer"
     begin
         DesignerMgt.GetConfig(Config);
         CopilotDialog.SetContext(DesignerMgt.GetReportCaption(Config), LogoColorsJson);
-        CopilotDialog.SetPictures(PictureInputJson);
         CopilotDialog.RunModal();
         if not CopilotDialog.GetProposals(Proposals) then
             exit;

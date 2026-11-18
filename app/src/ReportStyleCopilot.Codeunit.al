@@ -98,7 +98,7 @@ codeunit 50119 "Report Style Copilot"
         ArgumentsText: Text;
         Handled: Boolean;
     begin
-        OnBeforeGenerate(UserPrompt, Proposal.Count(), Wanted, ArgumentsText, Handled);
+        OnBeforeGenerate(UserPrompt, Colours, Proposal.Count(), Wanted, ArgumentsText, Handled);
         if Handled then
             Arguments.ReadFrom(ArgumentsText)
         else
@@ -387,7 +387,7 @@ codeunit 50119 "Report Style Copilot"
 
     /// Test hook: lets the local tools app stand in for the AI service. Kept = proposals already accepted, Wanted = how many more.
     [InternalEvent(false)]
-    local procedure OnBeforeGenerate(UserPrompt: Text; Kept: Integer; Wanted: Integer; var ArgumentsText: Text; var Handled: Boolean)
+    local procedure OnBeforeGenerate(UserPrompt: Text; Colours: Text; Kept: Integer; Wanted: Integer; var ArgumentsText: Text; var Handled: Boolean)
     begin
     end;
 

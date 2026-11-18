@@ -20,7 +20,7 @@ page 50103 "Report Style Copilot"
             {
                 Caption = 'Colours';
                 OptionCaption = 'Our brand, logo and pictures,Let Copilot choose,Blues,Greens,Warm tones,Neutral greys';
-                ToolTip = 'Which colours Copilot builds the themes on. "Our brand, logo and pictures" uses the company brand colour and the main colours of the company logo and of the pictures added in the designer. Only the colours and a few mood words are sent, never the pictures. Colours you name in the description always win.';
+                ToolTip = 'Which colours Copilot builds the themes on. "Our brand, logo and pictures" uses the main colours of the pictures you attach (first), the company brand colour and the company logo. Only the colours and a few mood words are sent, never the pictures. Colours you name in the description always win.';
             }
             field(BackgroundChoice; BackgroundChoice)
             {
@@ -101,8 +101,8 @@ page 50103 "Report Style Copilot"
         {
             systemaction(Attach)
             {
-                Caption = 'Attach a logo or picture';
-                ToolTip = 'Attach your logo, letterhead or a photo. Copilot builds the themes on its main colours and mood; the picture itself is not sent.';
+                Caption = 'Attach a logo, mood board or photo';
+                ToolTip = 'Attach your logo, a mood board or a photo. You can attach several. Copilot builds the themes on its main colours and mood; the picture itself is not sent.';
 
                 trigger OnAction()
                 begin
@@ -172,10 +172,11 @@ page 50103 "Report Style Copilot"
         WarmTxt: Label 'warm tones (terracotta, amber, sand)', Locked = true;
         NeutralTxt: Label 'neutral greys (charcoal, slate, stone)', Locked = true;
         PictureMood: Text;
-        PictureMoodTxt: Label 'The customer added %1 of their own pictures (logo, letterhead or photos). They feel %2; let the themes match that mood.', Comment = '%1 = number of pictures, %2 = mood words such as light, muted, warm', Locked = true;
+        PictureMoodTxt: Label 'The customer attached %1 picture(s): a logo, mood board or photos. Build every theme on the colours of these pictures: %2. They feel %3; let the themes match that mood.', Comment = '%1 = number of pictures, %2 = colours, %3 = mood words', Locked = true;
+        PictureColours: Text;
         PictureCount: Integer;
         AttachedText: Text;
-        AttachTitleTxt: Label 'Attach a logo or picture';
+        AttachTitleTxt: Label 'Attach a logo, mood board or photo';
         PictureFilterTxt: Label 'Pictures (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp', Locked = true;
         NotAPictureErr: Label '%1 could not be read as a picture. Attach a PNG, JPEG, GIF or BMP file.', Comment = '%1 = file name';
         AttachedLineTxt: Label '%1: %2 · feels %3', Comment = '%1 = file name, %2 = colour names, %3 = mood words';
@@ -203,43 +204,22 @@ page 50103 "Report Style Copilot"
 
     /// Adds a colour as its plain name, with the exact code after it for Copilot: "navy (#1F3A93)". Not shown to the user.
     local procedure AddColour(Hex: Text)
+    begin
+        AddColourTo(Colours, Hex);
+    end;
+
+    local procedure AddColourTo(var Target: Text; Hex: Text)
     var
         Rules: Codeunit "Report Style Theme Rules";
         Normalized: Text;
     begin
         if not Rules.TryNormalizeHex(Hex, Normalized) then
             exit;
-        if StrPos(Colours, Normalized) > 0 then
+        if StrPos(Target, Normalized) > 0 then
             exit;
-        if Colours <> '' then
-            Colours += ', ';
-        Colours += Rules.ColourName(Normalized) + ' (#' + Normalized + ')';
-    end;
-
-    /// The user's own pictures from the designer, as JSON {count, colors, mood}: their colours join the colour field,
-    /// and the mood words go into the prompt. The pictures themselves are never sent.
-    procedure SetPictures(PictureInput: Text)
-    var
-        Input: JsonObject;
-        Token: JsonToken;
-        Color: JsonToken;
-    begin
-        PictureCount := 0;
-        PictureMood := '';
-        if not Input.ReadFrom(PictureInput) then
-            exit;
-        if Input.Get('count', Token) then
-            PictureCount := Token.AsValue().AsInteger();
-        if PictureCount = 0 then
-            exit;
-        if Input.Get('mood', Token) then
-            PictureMood := Token.AsValue().AsText();
-        if Input.Get('colors', Token) then
-            foreach Color in Token.AsArray() do
-                if Color.IsValue() then
-                    AddColour(Color.AsValue().AsText());
-        if Colours <> '' then
-            ColourChoice := ColourChoice::BrandLogo;
+        if Target <> '' then
+            Target += ', ';
+        Target += Rules.ColourName(Normalized) + ' (#' + Normalized + ')';
     end;
 
     /// Reads the main colours and mood of an attached picture on the server; they join the colour field and the prompt.
@@ -260,7 +240,7 @@ page 50103 "Report Style Copilot"
         if not ImageColors.Analyse(PictureStream, Colors, Mood) then
             Error(NotAPictureErr, FileName);
         foreach Color in Colors do begin
-            AddColour(Color);
+            AddColourTo(PictureColours, Color);
             if Names <> '' then
                 Names += ', ';
             Names += Rules.ColourName(Color);
@@ -276,22 +256,28 @@ page 50103 "Report Style Copilot"
             AttachedText += Format(LineBreak);
         end;
         AttachedText += StrSubstNo(AttachedLineTxt, FileName, Names, Mood);
-        if Colours <> '' then
-            ColourChoice := ColourChoice::BrandLogo;
+        ColourChoice := ColourChoice::BrandLogo;
     end;
 
     local procedure PromptForCopilot(): Text
     begin
         if PictureMood = '' then
             exit(UserPrompt);
-        exit(UserPrompt + ' ' + StrSubstNo(PictureMoodTxt, PictureCount, PictureMood));
+        exit((UserPrompt + ' ' + StrSubstNo(PictureMoodTxt, PictureCount, PictureColours, PictureMood)).Trim());
     end;
 
     local procedure ColoursForCopilot(): Text
     begin
         case ColourChoice of
             ColourChoice::BrandLogo:
-                exit(Colours);
+                // Attached pictures first: they are what the user just gave Copilot to work from.
+                if PictureColours = '' then
+                    exit(Colours)
+                else
+                    if Colours = '' then
+                        exit(PictureColours)
+                    else
+                        exit(PictureColours + ', ' + Colours);
             ColourChoice::CopilotChooses:
                 exit('');
             ColourChoice::Blues:
