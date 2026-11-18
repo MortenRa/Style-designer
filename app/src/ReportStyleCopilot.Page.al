@@ -43,6 +43,15 @@ page 50103 "Report Style Copilot"
                 MultiLine = true;
                 InstructionalText = 'Describe the look you want, for example: calm and modern in soft pink, with easy-to-read tables.';
             }
+            // What Copilot takes from the attached pictures (Attach, under the prompt).
+            field(AttachedPictures; AttachedText)
+            {
+                Caption = 'Pictures';
+                Editable = false;
+                MultiLine = true;
+                Visible = AttachedText <> '';
+                ToolTip = 'The colours and mood read from the attached pictures. Only these go to Copilot, never the pictures.';
+            }
         }
     }
 
@@ -90,6 +99,16 @@ page 50103 "Report Style Copilot"
         }
         area(SystemActions)
         {
+            systemaction(Attach)
+            {
+                Caption = 'Attach a logo or picture';
+                ToolTip = 'Attach your logo, letterhead or a photo. Copilot builds the themes on its main colours and mood; the picture itself is not sent.';
+
+                trigger OnAction()
+                begin
+                    AttachPicture();
+                end;
+            }
             systemaction(Generate)
             {
                 Caption = 'Generate';
@@ -155,6 +174,11 @@ page 50103 "Report Style Copilot"
         PictureMood: Text;
         PictureMoodTxt: Label 'The customer added %1 of their own pictures (logo, letterhead or photos). They feel %2; let the themes match that mood.', Comment = '%1 = number of pictures, %2 = mood words such as light, muted, warm', Locked = true;
         PictureCount: Integer;
+        AttachedText: Text;
+        AttachTitleTxt: Label 'Attach a logo or picture';
+        PictureFilterTxt: Label 'Pictures (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp', Locked = true;
+        NotAPictureErr: Label '%1 could not be read as a picture. Attach a PNG, JPEG, GIF or BMP file.', Comment = '%1 = file name';
+        AttachedLineTxt: Label '%1: %2 · feels %3', Comment = '%1 = file name, %2 = colour names, %3 = mood words';
     /// Context from the designer: the report being styled and the colours read from the logo (JSON array of hex).
     /// The colour field starts with the brand colour and the logo colours; the user can change it freely.
     procedure SetContext(NewReportName: Text; LogoColors: Text)
@@ -214,6 +238,44 @@ page 50103 "Report Style Copilot"
             foreach Color in Token.AsArray() do
                 if Color.IsValue() then
                     AddColour(Color.AsValue().AsText());
+        if Colours <> '' then
+            ColourChoice := ColourChoice::BrandLogo;
+    end;
+
+    /// Reads the main colours and mood of an attached picture on the server; they join the colour field and the prompt.
+    local procedure AttachPicture()
+    var
+        ImageColors: Codeunit "Report Style Image Colors";
+        Rules: Codeunit "Report Style Theme Rules";
+        PictureStream: InStream;
+        FileName: Text;
+        Colors: List of [Text];
+        Color: Text;
+        Mood: Text;
+        Names: Text;
+        LineBreak: Char;
+    begin
+        if not UploadIntoStream(AttachTitleTxt, '', PictureFilterTxt, FileName, PictureStream) then
+            exit;
+        if not ImageColors.Analyse(PictureStream, Colors, Mood) then
+            Error(NotAPictureErr, FileName);
+        foreach Color in Colors do begin
+            AddColour(Color);
+            if Names <> '' then
+                Names += ', ';
+            Names += Rules.ColourName(Color);
+        end;
+        PictureCount += 1;
+        if PictureMood = '' then
+            PictureMood := Mood
+        else
+            if StrPos(PictureMood, Mood) = 0 then
+                PictureMood += '; ' + Mood;
+        if AttachedText <> '' then begin
+            LineBreak := 10;
+            AttachedText += Format(LineBreak);
+        end;
+        AttachedText += StrSubstNo(AttachedLineTxt, FileName, Names, Mood);
         if Colours <> '' then
             ColourChoice := ColourChoice::BrandLogo;
     end;

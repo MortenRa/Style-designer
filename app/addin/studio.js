@@ -46,7 +46,6 @@ function StudioInit(root) {
         '      <button class="rss-pics-add" data-pics-add="1" title="Add your logo, letterhead or photos. Copilot uses their colours and mood; the pictures are not sent.">+ Pictures</button>' +
         '      <input type="file" id="rss-pics-file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" multiple hidden>' +
         '      <label class="rss-design-pick">View <select class="rss-select" id="rss-design">' + designOptions + '</select></label>' +
-        '      <div class="rss-badge" id="rss-badge">Preview only. Nothing changes until it is approved and activated.</div>' +
         '    </header>' +
         '    <div class="rss-pics" id="rss-pics" hidden></div>' +
         '    <div class="rss-stage" id="rss-stage">' +
@@ -532,9 +531,12 @@ function useSuggestion(i) {
 }
 
 // Over the single preview: the themes to try as a carousel, so they can be compared on the page itself.
+// The suggestion strip over the preview is switched off: the suggestions are cards in the panel.
+var STAGE_CAROUSEL = false;
 function renderStageCarousel() {
     var bar = byId('rss-stage-car');
     if (!bar) return;
+    if (!STAGE_CAROUSEL) { bar.hidden = true; bar.innerHTML = ''; return; }
     var list = studio.data ? candidates() : [];
     var show = studio.view !== 'gallery' && list.length > 0;
     bar.hidden = !show;
