@@ -19,6 +19,8 @@ controladdin "Report Style Full Preview"
     event Ready();
     event FullViewRequested();
     event SuggestionStep(Delta: Integer);
+    // "Use my theme" on the bar: leave the suggestion.
+    event UseMyThemeRequested();
 
     procedure ShowPdf(PdfBase64: Text; Tooltip: Text);
     procedure ShowMessage(Message: Text);

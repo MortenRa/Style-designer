@@ -48,6 +48,23 @@ codeunit 50128 "Report Style Doc Groups"
         end;
     end;
 
+    /// The group a report belongs to (customer, vendor or internal); empty when it has no Body layout.
+    procedure GroupOf(ReportID: Integer): Text
+    var
+        Customer: List of [Integer];
+        Vendor: List of [Integer];
+        Others: List of [Integer];
+    begin
+        Classify(Customer, Vendor, Others);
+        if Customer.Contains(ReportID) then
+            exit(CustomerTok);
+        if Vendor.Contains(ReportID) then
+            exit(VendorTok);
+        if Others.Contains(ReportID) then
+            exit(InternalTok);
+        exit('');
+    end;
+
     procedure GroupCaption(GroupID: Text): Text
     begin
         case GroupID of

@@ -117,6 +117,15 @@ function renderBar() {
     text.querySelector('.pp-place').textContent = place;
     text.querySelector('small').textContent = s.index > 0 ? (s.reason || '') : 'Use the arrows to see them on your document.';
     bar.appendChild(text);
+    if (s.index > 0) {
+        var leave = document.createElement('button');
+        leave.type = 'button';
+        leave.className = 'pp-leave';
+        leave.textContent = 'Use my theme';
+        leave.title = 'Leave the Copilot suggestion and show your theme as it is';
+        leave.addEventListener('click', function () { Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('UseMyThemeRequested', []); });
+        bar.appendChild(leave);
+    }
     bar.appendChild(stepButton(1, 'Next suggestion', '\u203a'));
 }
 

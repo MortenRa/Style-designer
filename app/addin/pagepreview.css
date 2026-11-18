@@ -19,3 +19,6 @@ html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; backgroun
 .pp-step { flex: 0 0 28px; height: 28px; padding: 0; border: 1px solid #d1d1d1; border-radius: 50%; background: #fff; color: #323130; font-size: 18px; line-height: 1; cursor: pointer; }
 .pp-step:hover { border-color: #0f6cbd; color: #0f6cbd; }
 .pp-step:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }
+.pp-leave { flex: 0 0 auto; font: inherit; font-size: 12px; background: none; border: 0; color: #0f6cbd; cursor: pointer; padding: 4px 6px; white-space: nowrap; }
+.pp-leave:hover { text-decoration: underline; }
+.pp-leave:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }

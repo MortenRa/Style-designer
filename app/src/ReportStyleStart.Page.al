@@ -74,6 +74,7 @@ page 50105 "Report Style Start"
                         Directions: Codeunit "Report Style Directions";
                     begin
                         Directions.Apply(Rec);
+                        LeaveSuggestion();
                         ShowLogo();
                         RefreshAdvice();
                     end;
@@ -91,10 +92,19 @@ page 50105 "Report Style Start"
             group(Look)
             {
                 Caption = 'Look';
+                field(LookFrom; LookFromText)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Look from';
+                    Editable = false;
+                    Style = Strong;
+                    ToolTip = 'Where the colours and fonts come from: a Copilot suggestion, a design direction or a theme. Fonts, page colour and table style below adjust it.';
+                }
                 field("Base Theme"; Rec."Base Theme")
                 {
                     ApplicationArea = All;
                     Caption = 'Theme';
+                    Visible = not InSuggestion;
                     ToolTip = 'A theme that already exists in Business Central. Choosing one shows it as it is; the choices below then change it.';
 
                     // Our own list with the theme names only, instead of the layout table's technical columns.
@@ -121,6 +131,8 @@ page 50105 "Report Style Start"
                         if ReportLayoutList.IsEmpty() then
                             Error(UnknownThemeErr, Rec."Base Theme");
                         // Shown as it is: the choices below go back to "keep the base theme".
+                        LeaveSuggestion();
+                        Rec.Direction := Rec.Direction::NotChosen;
                         Rec."Theme Mode" := 'custom';
                         Rec.Palette := Rec.Palette::KeepBase;
                         Rec."Font Pair" := Rec."Font Pair"::KeepBase;
@@ -132,6 +144,7 @@ page 50105 "Report Style Start"
                 field(Palette; Rec.Palette)
                 {
                     ApplicationArea = All;
+                    Visible = not InSuggestion;
                     ToolTip = 'The main colours of the reports. "Keep base theme colours" leaves them as they are.';
 
                     trigger OnValidate()
@@ -194,6 +207,28 @@ page 50105 "Report Style Start"
                     end;
                 }
             }
+            group(SaveGroup)
+            {
+                Caption = 'Save';
+                field(ThemeName; Rec."Theme Name")
+                {
+                    ApplicationArea = All;
+                    Caption = 'Name';
+                    ToolTip = 'The name the theme is saved under. Approvers see it on the Theme Approvals page.';
+                }
+                field(UseOn; UseOn)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Use on';
+                    OptionCaption = 'This document,All documents in its group,Company default';
+                    ToolTip = 'Which documents get the new look when it is approved and activated: the document in the preview, every document of its group (customer, vendor or internal), or the company default.';
+
+                    trigger OnValidate()
+                    begin
+                        SetUseOn();
+                    end;
+                }
+            }
             group(Advice)
             {
                 Caption = 'Recommendations';
@@ -251,6 +286,11 @@ page 50105 "Report Style Start"
                         ShowSuggestion(SuggestionIndex + Delta);
                     end;
 
+                    trigger UseMyThemeRequested()
+                    begin
+                        UseMyTheme();
+                    end;
+
                     trigger FullViewRequested()
                     var
                         FullPreview: Page "Report Style Full Preview";
@@ -293,6 +333,7 @@ page 50105 "Report Style Start"
         area(Promoted)
         {
             actionref(UpdatePreview_Promoted; UpdatePreviewAction) { }
+            actionref(SendForApproval_Promoted; SendForApproval) { }
             actionref(OpenDesigner_Promoted; OpenDesigner) { }
         }
         area(Processing)
@@ -310,6 +351,26 @@ page 50105 "Report Style Start"
                     Rec.Modify(true);
                     Commit();
                     UpdatePreview();
+                end;
+            }
+            action(SendForApproval)
+            {
+                ApplicationArea = All;
+                Caption = 'Send for approval';
+                ToolTip = 'Save the theme and header/footer and send them for approval. Customers see the new look only after it is approved and activated on the Theme Approvals page.';
+                Image = SendApprovalRequest;
+
+                trigger OnAction()
+                var
+                    Runner: Codeunit "Report Style Designer Runner";
+                begin
+                    SetUseOn();
+                    Rec.Modify(true);
+                    Commit();
+                    Runner.SetSaveMode('submit');
+                    if not Runner.Run(Rec) then
+                        Error(GetLastErrorText());
+                    Message(Runner.GetResultText());
                 end;
             }
             action(OpenDesigner)
@@ -334,6 +395,13 @@ page 50105 "Report Style Start"
         AdviceText: Text;
         DirectionText: Text;
         LogoPickerReady: Boolean;
+        InSuggestion: Boolean;
+        LookFromText: Text;
+        UseOn: Option ThisDocument,Group,Company;
+        LookFromSuggestionTxt: Label 'Copilot suggestion "%1"', Comment = '%1 = theme name';
+        LookFromDirectionTxt: Label 'Design direction "%1"', Comment = '%1 = direction';
+        LookFromThemeTxt: Label 'Theme "%1"', Comment = '%1 = theme name';
+        NoGroupErr: Label 'The document in the preview does not belong to a document group. Choose This document or Company default.';
         LogoColorsJson: Text;
         CopilotAvailable: Boolean;
         SuggestionCount: Integer;
@@ -370,6 +438,14 @@ page 50105 "Report Style Start"
         DesignerMgt.GetConfig(Rec);
         CopilotAvailable := ReportStyleCopilot.IsAvailable();
         LoadStoredSuggestions();
+        case Rec."Apply To" of
+            'group':
+                UseOn := UseOn::Group;
+            'company':
+                UseOn := UseOn::Company;
+            else
+                UseOn := UseOn::ThisDocument;
+        end;
     end;
 
     // The company logo on the picker's small pages, or an upload prompt when there is none.
@@ -478,6 +554,60 @@ page 50105 "Report Style Start"
         end;
     end;
 
+    // The look comes from the Copilot suggestion in the preview, else a chosen design direction, else the theme.
+    local procedure ComputeLookFrom()
+    begin
+        InSuggestion := SuggestionIndex > 0;
+        if InSuggestion then begin
+            TempProposals.Get(SuggestionIndex);
+            LookFromText := StrSubstNo(LookFromSuggestionTxt, TempProposals.Name);
+        end else
+            if Rec.Direction <> Rec.Direction::NotChosen then
+                LookFromText := StrSubstNo(LookFromDirectionTxt, Format(Rec.Direction))
+            else
+                LookFromText := StrSubstNo(LookFromThemeTxt, Rec."Base Theme");
+    end;
+
+    // No suggestion in the preview any more; the bar keeps the suggestions one click away.
+    local procedure LeaveSuggestion()
+    begin
+        SuggestionIndex := 0;
+        SuggestionText := '';
+        SuggestionReasonText := '';
+        UpdateSuggestionBar();
+    end;
+
+    // "Use my theme" on the bar: the chosen theme as it is, without the suggestion's colours and fonts.
+    local procedure UseMyTheme()
+    begin
+        LeaveSuggestion();
+        Rec."Theme Mode" := 'custom';
+        Rec.Palette := Rec.Palette::KeepBase;
+        Rec."Font Pair" := Rec."Font Pair"::KeepBase;
+        Rec."Page Color" := Rec."Page Color"::KeepBase;
+        Rec."Table Style" := Rec."Table Style"::KeepBase;
+        RefreshAdvice();
+    end;
+
+    local procedure SetUseOn()
+    var
+        DocGroups: Codeunit "Report Style Doc Groups";
+    begin
+        case UseOn of
+            UseOn::ThisDocument:
+                Rec."Apply To" := 'layout';
+            UseOn::Company:
+                Rec."Apply To" := 'company';
+            UseOn::Group:
+                begin
+                    Rec."Apply Group" := CopyStr(DocGroups.GroupOf(Rec."Target Report ID"), 1, MaxStrLen(Rec."Apply Group"));
+                    if Rec."Apply Group" = '' then
+                        Error(NoGroupErr);
+                    Rec."Apply To" := 'group';
+                end;
+        end;
+    end;
+
     local procedure UpdateSuggestionBar()
     var
         Name: Text;
@@ -576,6 +706,7 @@ page 50105 "Report Style Start"
         Advice: Codeunit "Report Style Advice";
     begin
         AdviceText := Advice.GetAdviceText(Rec);
+        ComputeLookFrom();
         ComputeDirectionText();
     end;
 
