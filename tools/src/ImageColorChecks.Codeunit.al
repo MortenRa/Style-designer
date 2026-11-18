@@ -32,6 +32,9 @@ codeunit 50141 "Image Color Checks"
         Check(ProposalsUse('amber (#E0A526), navy (#1F3A93)', 'E0A526'), 'the themes are built on the first preferred colour (amber)');
         Check(ProposalsUse('navy (#1F3A93), amber (#E0A526)', '1F3A93'), 'the themes are built on the first preferred colour (navy)');
 
+        // Stored suggestions come back as the same proposals (Quick Start shows them again when it opens).
+        Check(SuggestionsRoundTrip(), 'stored suggestions come back unchanged');
+
         Message('IMAGE COLOR CHECKS PASSED: %1', Passed);
     end;
 
@@ -85,6 +88,29 @@ codeunit 50141 "Image Color Checks"
             exit(false);
         // The theme is named after its colour ("Soft amber"); its colours may be adjusted for contrast.
         exit(StrPos(LowerCase(TempProposal.Name), LowerCase(Rules.ColourName(Hex))) > 0);
+    end;
+
+    local procedure SuggestionsRoundTrip(): Boolean
+    var
+        TempBefore: Record "Report Style Proposal" temporary;
+        TempAfter: Record "Report Style Proposal" temporary;
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
+    begin
+        ReportStyleCopilot.SetProposalCount(3);
+        ReportStyleCopilot.Generate('', 'Sales - Invoice', 'navy (#1F3A93)', TempBefore);
+        ReportStyleCopilot.JsonToProposals(ReportStyleCopilot.ProposalsToJson(TempBefore), TempAfter);
+        if TempAfter.Count() <> TempBefore.Count() then
+            exit(false);
+        TempBefore.FindSet();
+        TempAfter.FindSet();
+        repeat
+            if (TempAfter.Name <> TempBefore.Name) or (TempAfter.Colors <> TempBefore.Colors) or (TempAfter."Font Pair" <> TempBefore."Font Pair") or
+               (TempAfter."Table Style" <> TempBefore."Table Style") or (TempAfter."Page Color" <> TempBefore."Page Color") or (TempAfter.Reason <> TempBefore.Reason)
+            then
+                exit(false);
+            TempAfter.Next();
+        until TempBefore.Next() = 0;
+        exit(true);
     end;
 
     local procedure Join(Colors: List of [Text]) Result: Text

@@ -40,6 +40,11 @@ codeunit 50104 "Report Style Designer Mgt."
             Store.Delete();
     end;
 
+    procedure GetStoredSuggestions(): Text
+    begin
+        exit(StoredSuggestions());
+    end;
+
     local procedure StoredSuggestions(): Text
     var
         Store: Record "Report Style Suggestion";

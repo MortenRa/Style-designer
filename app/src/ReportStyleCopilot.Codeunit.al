@@ -211,6 +211,46 @@ codeunit 50119 "Report Style Copilot"
         FeatureTelemetry.LogUsage('RSD0003', FeatureNameTok, 'Theme kept');
     end;
 
+    /// The stored suggestions (ProposalsToJson) back as proposals, in the same order.
+    procedure JsonToProposals(SuggestionsJson: Text; var Proposal: Record "Report Style Proposal")
+    var
+        Items: JsonArray;
+        Item: JsonToken;
+        Token: JsonToken;
+        Color: JsonToken;
+        Colors: Text;
+        EntryNo: Integer;
+    begin
+        Proposal.Reset();
+        Proposal.DeleteAll();
+        if not Items.ReadFrom(SuggestionsJson) then
+            exit;
+        foreach Item in Items do begin
+            EntryNo += 1;
+            Proposal.Init();
+            Proposal."Entry No." := EntryNo;
+            Proposal.Name := CopyStr(GetText(Item, 'name'), 1, MaxStrLen(Proposal.Name));
+            Proposal.Reason := CopyStr(GetText(Item, 'reason'), 1, MaxStrLen(Proposal.Reason));
+            Colors := '';
+            if Item.AsObject().Get('colors', Token) then
+                foreach Color in Token.AsArray() do begin
+                    if Colors <> '' then
+                        Colors += ',';
+                    Colors += Color.AsValue().AsText();
+                end;
+            Proposal.Colors := CopyStr(Colors, 1, MaxStrLen(Proposal.Colors));
+            if Item.AsObject().Get('fonts', Token) then
+                Proposal."Font Pair" := Enum::"Report Style Font Pair".FromInteger(Token.AsValue().AsInteger());
+            if Item.AsObject().Get('tableStyle', Token) then
+                Proposal."Table Style" := Enum::"Report Theme Table Style".FromInteger(Token.AsValue().AsInteger());
+            if Item.AsObject().Get('pageColor', Token) then
+                Proposal."Page Color" := Enum::"Report Style Page Color".FromInteger(Token.AsValue().AsInteger());
+            Proposal."Custom Page Color" := CopyStr(GetText(Item, 'customPage'), 1, MaxStrLen(Proposal."Custom Page Color"));
+            Proposal.Adjustments := CopyStr(GetText(Item, 'adjustments'), 1, MaxStrLen(Proposal.Adjustments));
+            Proposal.Insert();
+        end;
+    end;
+
     /// The proposals for the designer's suggestion strip.
     procedure ProposalsToJson(var Proposal: Record "Report Style Proposal") Result: Text
     var

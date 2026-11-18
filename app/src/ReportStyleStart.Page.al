@@ -393,6 +393,7 @@ page 50105 "Report Style Start"
         SuggestionReasonText: Text;
         TempProposals: Record "Report Style Proposal" temporary;
         SuggestionTxt: Label '%1 (%2 of %3)', Comment = '%1 = theme name, %2 = number, %3 = how many';
+        NotInPreviewTxt: Label '%1 suggestions from your last Copilot run. Use Next suggestion to see them.', Comment = '%1 = how many';
         CreatedTxt: Label 'Copilot made %1 themes. "%2" is in the preview now. Use Next suggestion to see the others, or compare them in the designer.', Comment = '%1 = how many, %2 = theme name';
         OpenDesignerTxt: Label 'Compare in the designer';
         ReplaceLogoQst: Label 'This replaces the company logo in Company Information. All documents show the new logo right away, without approval. Continue?';
@@ -419,6 +420,7 @@ page 50105 "Report Style Start"
     begin
         DesignerMgt.GetConfig(Rec);
         CopilotAvailable := ReportStyleCopilot.IsAvailable();
+        LoadStoredSuggestions();
     end;
 
     // The company logo on the picker's small pages, or an upload prompt when there is none.
@@ -495,6 +497,36 @@ page 50105 "Report Style Start"
         SuggestionCount := TempProposals.Count();
         ShowSuggestion(1);
         NotifyCreated();
+    end;
+
+    // The suggestions from the last Copilot run (kept until Clear in the designer). The configuration is not
+    // changed: if it is one of them, that one is marked; otherwise Next suggestion starts with the first.
+    local procedure LoadStoredSuggestions()
+    var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
+    begin
+        ReportStyleCopilot.JsonToProposals(DesignerMgt.GetStoredSuggestions(), TempProposals);
+        SuggestionCount := TempProposals.Count();
+        SuggestionIndex := 0;
+        if SuggestionCount = 0 then
+            exit;
+        TempProposals.FindSet();
+        repeat
+            if (Rec.Palette = Rec.Palette::Custom) and (Rec."Custom Colors" = TempProposals.Colors) and
+               (Rec."Font Pair" = TempProposals."Font Pair") and (Rec."Table Style" = TempProposals."Table Style") and
+               (Rec."Page Color" = TempProposals."Page Color")
+            then
+                SuggestionIndex := TempProposals."Entry No.";
+        until (TempProposals.Next() = 0) or (SuggestionIndex <> 0);
+        if SuggestionIndex <> 0 then begin
+            TempProposals.Get(SuggestionIndex);
+            SuggestionText := StrSubstNo(SuggestionTxt, TempProposals.Name, SuggestionIndex, SuggestionCount);
+            SuggestionReasonText := TempProposals.Reason;
+        end else begin
+            SuggestionText := StrSubstNo(NotInPreviewTxt, SuggestionCount);
+            SuggestionReasonText := '';
+        end;
     end;
 
     // Tells the user what Copilot made and where to go next, at the top of the page.
