@@ -22,6 +22,8 @@ codeunit 50126 "Gallery Smoke Test"
         DesignerMgt.GetConfig(Config);
         Commit();
         ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Body);
+        // Temporary preview copies are skipped, as in the designer's own lists.
+        ReportLayoutList.SetFilter(Name, '<>Preview *');
         if ReportLayoutList.FindSet() then
             repeat
                 DesignerMgt.GalleryConfig(Config, ReportLayoutList."Report ID", ReportLayoutList.Name, Format(ReportLayoutList."Application ID"), GalleryRec);
@@ -63,6 +65,8 @@ codeunit 50126 "Gallery Smoke Test"
     begin
         Config.Get();
         ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Body);
+        // Temporary preview copies are skipped, as in the designer's own lists.
+        ReportLayoutList.SetFilter(Name, '<>Preview *');
         if ReportLayoutList.FindSet() then
             repeat
                 Clear(Doc);
