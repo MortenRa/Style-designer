@@ -16,15 +16,16 @@ var studio = {
 
 // The ten designer views. Theme and header/footer are never shown together: they stay in tabs (or steps).
 var DESIGN_VIEWS = [
-    { name: 'Simple: preview right', cls: 'v1', copilot: 'inline', density: 'simple' },
-    { name: 'Simple: preview centre, Copilot on the side', cls: 'v2', copilot: 'aside', density: 'simple' },
+    { name: 'Simple: preview left (standard)', cls: 'v5', copilot: 'inline', density: 'simple', full: 4 },
+    { name: 'Simple: preview right', cls: 'v1', copilot: 'inline', density: 'simple', full: 3 },
+    { name: 'Simple: preview centre, Copilot on the side', cls: 'v2', copilot: 'aside', density: 'simple', full: 6 },
     { name: 'Full: preview right', cls: 'v4', copilot: 'inline', density: 'full' },
-    { name: 'Full: preview left (standard)', cls: 'v5', copilot: 'inline', density: 'full' },
-    { name: 'Copilot first: suggestions on the left', cls: 'v6', copilot: 'aside', density: 'simple' },
+    { name: 'Full: preview left', cls: 'v5', copilot: 'inline', density: 'full' },
+    { name: 'Copilot first: suggestions on the left', cls: 'v6', copilot: 'aside', density: 'simple', full: 6 },
     { name: 'Full: centre, Copilot on the side', cls: 'v10', copilot: 'aside', density: 'full' },
     { name: 'Split: theme left, header/footer right', cls: 'v11', copilot: 'inline', density: 'full', split: true }
 ];
-var DEFAULT_DESIGN = 3;   // index of "Full: preview left (standard)"
+var DEFAULT_DESIGN = 0;   // "Simple: preview left (standard)"; "All options" switches to the view's full version
 
 function currentDesignView() { return DESIGN_VIEWS[studio.design === undefined ? DEFAULT_DESIGN : studio.design]; }
 
@@ -131,6 +132,8 @@ function Init(dataText) {
     }
     var current = findLayout(studio.state.reportId, studio.state.layoutName);
     if (current) rememberLayout(current);
+    var view = currentDesignView();
+    studio.root.querySelector('.rss').className = 'rss ' + view.cls + ' d-' + view.density;
     // The page's Copilot prompt action starts outside the add-in: give it the logo colours once.
     if (!studio.logoSent && studio.data.copilot && studio.data.copilot.enabled) {
         studio.logoSent = true;
@@ -294,13 +297,14 @@ function renderPanel() {
                 var on = s.palette === copilot.customPalette && sameColors(g.colors, s.customColors) && g.fonts === s.fonts &&
                     g.tableStyle === s.tableStyle && g.pageColor === s.pageColor;
                 if (on) picked = g;
-                return '<button class="rss-card' + (on ? ' on' : '') + '" data-suggestion="' + i + '" title="' + esc(g.reason) + '">' +
-                    swatchRow(g.colors) + '<div class="rss-card-caption">' + esc(g.name) + '</div></button>';
+                return suggestionCard(g, i, on);
             }).join('');
-            copilotBody = sub(SPARKLE + ' Copilot suggestions', carouselHtml(cards, copilot.suggestions.length) +
-                (picked ? '<div class="rss-why">' + esc(picked.reason) + (picked.adjustments ? ' <i>' + esc(picked.adjustments) + '</i>' : '') + '</div>' : ''),
-                'AI-generated. Check the preview before you apply. You can still change everything below.',
-                sumText(picked ? picked.name : copilot.suggestions.length + ' proposals'));
+            copilotBody = sub(SPARKLE + ' Copilot suggestions',
+                '<div class="rss-sug-intro">Click a suggestion to see it on your document.</div>' +
+                '<div class="rss-sug-list" role="list">' + cards + '</div>' +
+                (picked && picked.adjustments ? '<div class="rss-why"><i>' + esc(picked.adjustments) + '</i></div>' : ''),
+                'AI-generated. Check the preview before you send it for approval. You can still change everything.',
+                sumText(picked ? picked.name : copilot.suggestions.length + ' suggestions'));
             if (currentDesignView().copilot !== 'aside') themeBody += copilotBody;
         }
         // The themes that already exist, as they are: see one in the preview, or compare it with others.
@@ -415,7 +419,10 @@ function renderPanel() {
     var foldAll = tabKeys.length > 1
         ? '<div class="rss-foldall"><button class="rss-link" data-foldall="' + (allClosed ? 'open' : 'close') + '">' + (allClosed ? 'Expand all' : 'Collapse all') + '</button></div>'
         : '';
-    html += '<div class="rss-tabpanel" role="tabpanel">' + foldAll + (tab === 'theme' ? themeBody : headerBody) + '</div>';
+    var moreLink = currentDesignView().full !== undefined
+        ? '<div class="rss-alloptions"><button class="rss-link" data-all-options="1">All options: page colour, text size, table style, names…</button></div>'
+        : '';
+    html += '<div class="rss-tabpanel" role="tabpanel">' + foldAll + (tab === 'theme' ? themeBody : headerBody) + moreLink + '</div>';
 
     var nothing = s.themeMode === 'keep' && s.headerMode === 'keep';
     // The group of the selected document; "Apply to" can cover the whole group.
@@ -603,10 +610,23 @@ function wirePanel(panel) {
     var s = studio.state;
     wirePicker();
     on(panel, '[data-tab]', function (el) { studio.tab = el.getAttribute('data-tab'); studio.tabChanged = true; renderPanel(); });
+    // One section open at a time, so the open one has the room and nothing needs a long scroll.
     on(panel, '[data-fold]', function (el) {
         var key = el.getAttribute('data-fold');
-        if (studio.expanded[key]) delete studio.expanded[key]; else studio.expanded[key] = true;
+        var opening = !studio.expanded[key];
+        studio.foldKeys.forEach(function (k) { delete studio.expanded[k]; });
+        if (opening) studio.expanded[key] = true;
         renderPanel();
+        if (opening) {
+            var head = studio.root.querySelector('.rss-fold-head[data-fold="' + key.replace(/"/g, '\\"') + '"]');
+            if (head) head.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    });
+    on(panel, '[data-all-options]', function () {
+        var full = currentDesignView().full;
+        if (full === undefined) return;
+        byId('rss-design').value = String(full);
+        setDesignView(full);
     });
     on(panel, '[data-foldall]', function (el) {
         var close = el.getAttribute('data-foldall') === 'close';
@@ -1411,6 +1431,27 @@ function lightPage(hex) {
 function hasCustomColors() { return studio.state.customColors && studio.state.customColors.length === 12; }
 
 function sameColors(a, b) { return !!a && !!b && a.join() === b.join(); }
+
+// One Copilot suggestion: a small page drawn in its page colour, heading font and accent, then its name and why.
+function suggestionCard(g, index, on) {
+    var d = studio.data, c = g.colors || [];
+    var font = (d.fonts || []).filter(function (f) { return f.id === g.fonts; })[0] || {};
+    var page = g.customPage || (((d.pageColors || []).filter(function (p) { return p.id === g.pageColor; })[0] || {}).hex) || 'FFFFFF';
+    var heading = font.heading ? 'font-family:\'' + font.heading + '\';' : '';
+    var accent = c[6] || '808080', ink = c[2] || c[0] || '333333';
+    var banded = g.tableStyle === 2;
+    var rows = [0, 1, 2].map(function (k) {
+        return '<i class="rss-sug-row" style="' + (banded && k === 1 ? 'background:#' + (c[3] || 'EEEEEE') : '') + '"></i>';
+    }).join('');
+    return '<button class="rss-sug' + (on ? ' on' : '') + '" role="listitem" data-suggestion="' + index + '" aria-pressed="' + on + '">' +
+        '<span class="rss-sug-sheet" style="background:#' + page + '">' +
+        '<i class="rss-sug-h" style="' + heading + 'color:#' + ink + '">Aa</i>' +
+        '<i class="rss-sug-bar" style="background:#' + accent + '"></i>' + rows + '</span>' +
+        '<span class="rss-sug-text"><b>' + esc(g.name) + '</b>' +
+        '<small>' + esc(g.reason || '') + '</small>' +
+        '<span class="rss-sug-meta">' + miniSwatches(c) + '<span>' + esc(shortCaption(font.caption || '')) + '</span></span></span>' +
+        (on ? '<span class="rss-sug-badge">In preview</span>' : '') + '</button>';
+}
 
 function swatchRow(colors) {
     return '<div class="rss-swatches">' + [0, 6, 7, 8, 9, 3].map(function (i) {

@@ -52,6 +52,33 @@ page 50105 "Report Style Start"
                     begin
                         UploadLogo();
                     end;
+
+                    trigger LogoColorsComputed(Colors: Text)
+                    begin
+                        LogoColorsJson := Colors;
+                    end;
+                }
+            }
+            group(CopilotGroup)
+            {
+                Caption = 'Copilot suggestions';
+                Visible = SuggestionCount > 0;
+
+                field(SuggestionName; SuggestionText)
+                {
+                    ApplicationArea = All;
+                    Caption = 'In the preview';
+                    Editable = false;
+                    ToolTip = 'The Copilot suggestion shown in the preview. Use Next suggestion to see the others, or open the designer to compare them side by side.';
+                }
+                field(SuggestionReason; SuggestionReasonText)
+                {
+                    ApplicationArea = All;
+                    ShowCaption = false;
+                    Editable = false;
+                    MultiLine = true;
+                    Style = Subordinate;
+                    ToolTip = 'Why Copilot suggests this theme.';
                 }
             }
             group(DirectionGroup)
@@ -232,11 +259,35 @@ page 50105 "Report Style Start"
 
     actions
     {
+        area(Prompting)
+        {
+            action(DraftWithCopilot)
+            {
+                ApplicationArea = All;
+                Caption = 'Draft with Copilot';
+                ToolTip = 'Describe the look you want, and Copilot suggests themes built on your logo and brand colours.';
+                Image = Sparkle;
+                Visible = CopilotAvailable;
+
+                trigger OnAction()
+                begin
+                    RunCopilot();
+                end;
+            }
+        }
         area(Promoted)
         {
             actionref(UpdatePreview_Promoted; UpdatePreviewAction) { }
             actionref(OpenDesigner_Promoted; OpenDesigner) { }
             actionref(UploadLogo_Promoted; UploadLogoAction) { }
+            group(Suggestions_Promoted)
+            {
+                Caption = 'Copilot suggestions';
+                Visible = SuggestionCount > 1;
+
+                actionref(PreviousSuggestion_Promoted; PreviousSuggestion) { }
+                actionref(NextSuggestion_Promoted; NextSuggestion) { }
+            }
         }
         area(Processing)
         {
@@ -253,6 +304,32 @@ page 50105 "Report Style Start"
                     Rec.Modify(true);
                     Commit();
                     UpdatePreview();
+                end;
+            }
+            action(PreviousSuggestion)
+            {
+                ApplicationArea = All;
+                Caption = 'Previous suggestion';
+                ToolTip = 'Show the previous Copilot suggestion in the preview.';
+                Image = PreviousRecord;
+                Visible = SuggestionCount > 1;
+
+                trigger OnAction()
+                begin
+                    ShowSuggestion(SuggestionIndex - 1);
+                end;
+            }
+            action(NextSuggestion)
+            {
+                ApplicationArea = All;
+                Caption = 'Next suggestion';
+                ToolTip = 'Show the next Copilot suggestion in the preview.';
+                Image = NextRecord;
+                Visible = SuggestionCount > 1;
+
+                trigger OnAction()
+                begin
+                    ShowSuggestion(SuggestionIndex + 1);
                 end;
             }
             action(UploadLogoAction)
@@ -289,6 +366,15 @@ page 50105 "Report Style Start"
         AdviceText: Text;
         DirectionText: Text;
         LogoPickerReady: Boolean;
+        LogoColorsJson: Text;
+        CopilotAvailable: Boolean;
+        SuggestionCount: Integer;
+        SuggestionIndex: Integer;
+        SuggestionText: Text;
+        SuggestionReasonText: Text;
+        TempProposals: Record "Report Style Proposal" temporary;
+        SuggestionTxt: Label '%1 (%2 of %3)', Comment = '%1 = theme name, %2 = number, %3 = how many';
+        ReplaceLogoQst: Label 'This replaces the company logo in Company Information. All documents show the new logo right away, without approval. Continue?';
         NoLogoTxt: Label 'Your company has no logo in Company Information yet. Upload one to see it on your documents.';
         UploadTitleTxt: Label 'Upload logo';
         ImageFilterTxt: Label 'Images (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp', Locked = true;
@@ -305,9 +391,11 @@ page 50105 "Report Style Start"
 
     trigger OnOpenPage()
     var
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
     begin
         DesignerMgt.GetConfig(Rec);
+        CopilotAvailable := ReportStyleCopilot.IsAvailable();
     end;
 
     // The company logo on the picker's small pages, or an upload prompt when there is none.
@@ -336,6 +424,9 @@ page 50105 "Report Style Start"
         FileName: Text;
         TableNo: Integer;
     begin
+        if HasCompanyLogo() then
+            if not Confirm(ReplaceLogoQst, false) then
+                exit;
         Rec.Modify(true);
         Commit();
         if not UploadIntoStream(UploadTitleTxt, '', ImageFilterTxt, FileName, PictureStream) then
@@ -351,6 +442,55 @@ page 50105 "Report Style Start"
         Commit();
         ShowLogo();
         UpdatePreview();
+    end;
+
+    local procedure HasCompanyLogo(): Boolean
+    var
+        Copilot: Codeunit "Report Style Copilot";
+        BrandHex: Text;
+        LogoBase64: Text;
+    begin
+        Copilot.GetCompanyBrand(BrandHex, LogoBase64);
+        exit(LogoBase64 <> '');
+    end;
+
+    // The same Copilot dialog as the designer. The first suggestion goes into the preview; the others are a click
+    // away here (Next suggestion) and in the designer, which shows the same suggestions.
+    local procedure RunCopilot()
+    var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
+        CopilotDialog: Page "Report Style Copilot";
+    begin
+        Rec.Modify(true);
+        Commit();
+        CopilotDialog.SetContext(DesignerMgt.GetReportCaption(Rec), LogoColorsJson);
+        CopilotDialog.RunModal();
+        if not CopilotDialog.GetProposals(TempProposals) then
+            exit;
+        DesignerMgt.SaveSuggestions(ReportStyleCopilot.ProposalsToJson(TempProposals));
+        SuggestionCount := TempProposals.Count();
+        ShowSuggestion(1);
+    end;
+
+    local procedure ShowSuggestion(Index: Integer)
+    var
+        ReportStyleCopilot: Codeunit "Report Style Copilot";
+    begin
+        if SuggestionCount = 0 then
+            exit;
+        // Round: after the last comes the first.
+        if Index < 1 then
+            Index := SuggestionCount;
+        if Index > SuggestionCount then
+            Index := 1;
+        SuggestionIndex := Index;
+        TempProposals.FindSet();
+        TempProposals.Next(Index - 1);
+        ReportStyleCopilot.ApplyProposal(Rec, TempProposals);
+        SuggestionText := StrSubstNo(SuggestionTxt, TempProposals.Name, Index, SuggestionCount);
+        SuggestionReasonText := TempProposals.Reason;
+        RefreshAdvice();
     end;
 
     local procedure ComputeDocumentText()

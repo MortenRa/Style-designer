@@ -18,6 +18,8 @@ controladdin "Report Style Logo Picker"
     event Ready();
     event PlacementChosen(Placement: Text);
     event UploadRequested();
+    // The logo's main colours (JSON array of hex), for Draft with Copilot. Never the picture.
+    event LogoColorsComputed(Colors: Text);
 
     procedure ShowLogo(LogoBase64: Text; Placement: Text);
     procedure ShowNoLogo(Message: Text);
