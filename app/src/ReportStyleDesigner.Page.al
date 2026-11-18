@@ -30,11 +30,13 @@ page 50102 "Report Style Designer"
                 trigger PreviewRequested(State: Text; Seq: Integer)
                 var
                     Runner: Codeunit "Report Style Designer Runner";
+                    Advice: Codeunit "Report Style Advice";
                     Pdf: Codeunit "Temp Blob";
                     Base64Convert: Codeunit "Base64 Convert";
                 begin
                     DesignerMgt.ApplyState(Config, State);
                     Commit();
+                    CurrPage.Designer.SetAdvice(Advice.GetAdviceJson(Config));
                     if Runner.Preview(Config) then begin
                         Runner.GetPdf(Pdf);
                         CurrPage.Designer.ShowPreview(Seq, Base64Convert.ToBase64(Pdf.CreateInStream()));

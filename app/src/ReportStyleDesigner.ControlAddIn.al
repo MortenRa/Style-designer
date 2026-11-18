@@ -47,4 +47,6 @@ controladdin "Report Style Designer"
     procedure ShowGalleryError(Seq: Integer; Message: Text);
     procedure GalleryDataChanged(ReportId: Integer);
     procedure GalleryProgress(Pending: Integer);
+    // Soft recommendations for the current draft: JSON array of sentences.
+    procedure SetAdvice(AdviceJson: Text);
 }

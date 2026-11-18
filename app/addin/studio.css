@@ -401,3 +401,10 @@
 .rss-pic-sw { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .15); }
 .rss-pics-read span:last-child { margin-left: 4px; color: var(--muted); }
 .rss-pics-note { color: var(--muted); font-size: 12px; }
+
+/* Soft recommendations */
+.rss-advice { margin: 8px 0 10px; padding: 8px 10px; background: #fff8e6; border: 1px solid #f2d58a; border-radius: 6px; }
+.rss-advice-title { font-weight: 600; margin-bottom: 4px; }
+.rss-advice ul { margin: 0; padding-left: 18px; }
+.rss-advice li { margin: 2px 0; }
+.rss-advice-note { margin-top: 4px; font-size: 12px; color: var(--muted); }

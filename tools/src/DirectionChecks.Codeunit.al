@@ -16,6 +16,9 @@ codeunit 50135 "Direction Checks"
         Ordinal: Integer;
         Signature: Text;
     begin
+        // A normal logo, so the result does not depend on the company's own logo.
+        Advice.SetLogoSize(800, 300);
+
         // Not chosen changes nothing.
         Config.Init();
         Config."HF Logo" := 'none';

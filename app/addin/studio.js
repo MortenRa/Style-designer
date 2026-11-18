@@ -1407,7 +1407,23 @@ function esc(text) {
 function statusLine() {
     var s = studio.state;
     var name = s.themeMode === 'custom' ? (s.themeName || 'Custom theme') : (s.baseTheme || 'Base theme');
-    return '<div class="rss-status">Preview: <b>' + esc(name) + '</b> · not applied yet</div>';
+    return '<div class="rss-status">Preview: <b>' + esc(name) + '</b> · not applied yet</div>' +
+        '<div id="rss-advice">' + adviceHtml() + '</div>';
+}
+
+// Soft recommendations from Business Central for the current draft. They explain; they never block Apply.
+function SetAdvice(adviceJson) {
+    try { studio.advice = JSON.parse(adviceJson) || []; } catch (e) { studio.advice = []; }
+    var box = byId('rss-advice');
+    if (box) box.innerHTML = adviceHtml();
+}
+
+function adviceHtml() {
+    var list = studio.advice || [];
+    if (!list.length) return '';
+    return '<div class="rss-advice" role="note"><div class="rss-advice-title">Recommendations</div><ul>' +
+        list.map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('') +
+        '</ul><div class="rss-advice-note">You can still apply the style.</div></div>';
 }
 
 /* ---------- Pictures for Copilot ---------- */
