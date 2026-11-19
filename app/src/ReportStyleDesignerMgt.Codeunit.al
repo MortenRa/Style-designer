@@ -1087,6 +1087,12 @@ codeunit 50104 "Report Style Designer Mgt."
     end;
 
     // Platform placeholder themes have no theme part, so they cannot be used as a base.
+    /// False for a theme whose file cannot be read, such as StandardTheme, which is built into the platform.
+    procedure IsUsableTheme(var ReportLayoutList: Record "Report Layout List"): Boolean
+    begin
+        exit(HasThemePart(ReportLayoutList));
+    end;
+
     local procedure HasThemePart(var ReportLayoutList: Record "Report Layout List"): Boolean
     var
         DataCompression: Codeunit "Data Compression";

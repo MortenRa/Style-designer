@@ -1,6 +1,7 @@
 namespace Abakion.ReportStyleDesigner;
 
 using System.Environment.Configuration;
+using System.IO;
 using System.Reflection;
 using System.Utilities;
 
@@ -18,6 +19,7 @@ codeunit 50102 "Report Style Configurator Mgt."
         AppliedMsg: Label 'Theme %1 was saved and assigned to %2.', Comment = '%1 = theme name, %2 = what it was assigned to';
         CompanyDefaultTxt: Label 'the company default';
         OtherKindErr: Label 'A theme or header/footer named %1 already exists. Choose another name.', Comment = '%1 = name';
+        BaseNotReadableErr: Label 'The theme %1 is built into Business Central and its file cannot be read, so it cannot be the starting point. Choose another theme, for example DefaultTheme.', Comment = '%1 = theme name';
         LayoutTargetTxt: Label 'layout %1 of report %2', Comment = '%1 = layout name, %2 = report ID';
 
     procedure LookupBodyLayout(var Config: Record "Report Style Config"): Boolean
@@ -194,6 +196,7 @@ codeunit 50102 "Report Style Configurator Mgt."
 
     procedure GetBaseTheme(ThemeName: Text; var Theme: Codeunit "Temp Blob")
     var
+        DataCompression: Codeunit "Data Compression";
         ReportLayoutList: Record "Report Layout List";
         LayoutOutStream: OutStream;
     begin
@@ -204,6 +207,8 @@ codeunit 50102 "Report Style Configurator Mgt."
             Error(NoBaseErr, ThemeName);
         Theme.CreateOutStream(LayoutOutStream);
         ReportLayoutList.Layout.ExportStream(LayoutOutStream);
+        if not DataCompression.IsZip(Theme.CreateInStream()) then
+            Error(BaseNotReadableErr, ThemeName);
     end;
 
     procedure StorePart(ThemeName: Text[250]; Generated: Codeunit "Temp Blob")

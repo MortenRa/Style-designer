@@ -156,12 +156,15 @@ page 50105 "Report Style Start"
                     trigger OnValidate()
                     var
                         ReportLayoutList: Record "Report Layout List";
+                        DesignerMgt: Codeunit "Report Style Designer Mgt.";
                     begin
                         ReportLayoutList.SetRange("Report ID", 2000000001);
                         ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Theme);
                         ReportLayoutList.SetRange(Name, Rec."Base Theme");
-                        if ReportLayoutList.IsEmpty() then
+                        if not ReportLayoutList.FindFirst() then
                             Error(UnknownThemeErr, Rec."Base Theme");
+                        if not DesignerMgt.IsUsableTheme(ReportLayoutList) then
+                            Error(NotUsableThemeErr, Rec."Base Theme");
                         // Shown as it is: the choices below go back to "keep the base theme".
                         LeaveSuggestion();
                         Rec.Direction := Rec.Direction::NotChosen;
@@ -436,6 +439,7 @@ page 50105 "Report Style Start"
         CreatedTxt: Label 'Copilot made %1 themes. "%2" is in the preview now. Use the arrows over the preview to see the others, or compare them in the designer.', Comment = '%1 = how many, %2 = theme name';
         OpenDesignerTxt: Label 'Compare in the designer';
         ReplaceLogoQst: Label 'This replaces the company logo in Company Information. All documents show the new logo right away, without approval. Continue?';
+        NotUsableThemeErr: Label 'The theme %1 is built into Business Central and cannot be the starting point. Choose another theme, for example DefaultTheme.', Comment = '%1 = theme name';
         UnknownThemeErr: Label 'There is no theme called "%1". Choose one from the list.', Comment = '%1 = the name typed';
         NoLogoTxt: Label 'Your company has no logo in Company Information yet. Upload one to see it on your documents.';
         UploadTitleTxt: Label 'Upload logo';
