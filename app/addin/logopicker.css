@@ -1,5 +1,6 @@
 html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; background: transparent; font: 13px "Segoe UI", sans-serif; color: #323130; }
-.lp-row { display: flex; gap: 8px; max-width: 520px; height: 100%; box-sizing: border-box; padding: 4px 2px; }
+.lp-wrap { height: 100%; display: flex; flex-direction: column; }
+.lp-row { display: flex; gap: 8px; max-width: 520px; flex: 1; min-height: 0; box-sizing: border-box; padding: 4px 2px; }
 .lp-pick { flex: 1; min-width: 0; font: inherit; color: inherit; background: #fff; border: 1px solid #d1d1d1; border-radius: 6px; padding: 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .lp-pick:hover { border-color: #8a8886; }
 .lp-pick:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }
@@ -19,3 +20,9 @@ html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; backgroun
 .lp-empty p { margin: 0; color: #605e5c; }
 .lp-upload { font: inherit; background: #0f6cbd; color: #fff; border: 0; border-radius: 4px; padding: 6px 14px; cursor: pointer; }
 .lp-upload:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }
+.lp-note { flex: none; padding: 2px 2px 0; font-size: 12px; color: #605e5c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp-trial { color: #8a5a00; }
+.lp-link { font: inherit; background: none; border: 0; padding: 0; color: #0f6cbd; cursor: pointer; text-decoration: underline; }
+.lp-link:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }
+.lp-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.lp-secondary { background: #fff; color: #0f6cbd; border: 1px solid #0f6cbd; }

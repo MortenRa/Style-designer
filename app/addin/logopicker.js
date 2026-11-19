@@ -1,7 +1,7 @@
 // The company logo on four small pages (left, centre, right, no logo). A click picks the placement.
 // The sketch follows the generated header: title first and the logo under it on the left or right,
 // or the logo on its own centred line above the title.
-var picker = { logo: '', current: 'right' };
+var picker = { logo: '', current: 'right', trial: false };
 var PLACEMENTS = [['left', 'Left'], ['center', 'Center'], ['right', 'Right'], ['none', 'No logo']];
 
 function ShowLogo(logoBase64, placement) {
@@ -15,16 +15,26 @@ function ShowLogo(logoBase64, placement) {
     });
 }
 
+function SetTrialLogo(isTrial) {
+    picker.trial = !!isTrial;
+}
+
 function ShowNoLogo(message) {
     var box = el('div', 'lp-empty');
     box.appendChild(text('p', message));
-    var button = el('button', 'lp-upload');
-    button.type = 'button';
-    button.textContent = 'Upload logo';
-    button.addEventListener('click', function () {
-        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('UploadRequested', []);
-    });
-    box.appendChild(button);
+    var buttons = el('div', 'lp-buttons');
+    var tryIt = el('button', 'lp-upload');
+    tryIt.type = 'button';
+    tryIt.textContent = 'Try a logo in the preview';
+    tryIt.title = 'Only the preview shows it. Company Information is not changed.';
+    tryIt.addEventListener('click', function () { Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('TryLogoRequested', []); });
+    buttons.appendChild(tryIt);
+    var save = el('button', 'lp-upload lp-secondary');
+    save.type = 'button';
+    save.textContent = 'Upload to Company Information';
+    save.addEventListener('click', function () { Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('UploadRequested', []); });
+    buttons.appendChild(save);
+    box.appendChild(buttons);
     replaceContent(box);
 }
 
@@ -47,7 +57,24 @@ function render() {
         });
         row.appendChild(pick);
     });
-    replaceContent(row);
+    var wrap = el('div', 'lp-wrap');
+    wrap.appendChild(row);
+    wrap.appendChild(logoNote());
+    replaceContent(wrap);
+}
+
+// Under the pages: try another logo in the preview, or, with a trial logo, say so and offer the company logo again.
+function logoNote() {
+    var note = el('div', 'lp-note' + (picker.trial ? ' lp-trial' : ''));
+    if (picker.trial) note.appendChild(text('span', 'Trial logo, preview only. Documents keep the logo in Company Information. '));
+    var link = el('button', 'lp-link');
+    link.type = 'button';
+    link.textContent = picker.trial ? 'Back to company logo' : 'Try another logo in the preview';
+    link.addEventListener('click', function () {
+        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod(picker.trial ? 'CompanyLogoRequested' : 'TryLogoRequested', []);
+    });
+    note.appendChild(link);
+    return note;
 }
 
 // One small A4 page: the header as the generator builds it, then grey lines for the body.

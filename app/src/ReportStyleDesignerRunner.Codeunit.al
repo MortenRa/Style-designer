@@ -57,6 +57,9 @@ codeunit 50105 "Report Style Designer Runner"
         if Succeeded then begin
             PreviewStep.SetStep('render');
             Succeeded := PreviewStep.Run(Config);
+            // With a trial logo the render rolls itself back on purpose; the PDF is kept in the step.
+            if not Succeeded and PreviewStep.RenderedWithPreviewLogo() then
+                Succeeded := true;
             if not Succeeded then
                 ErrorText := GetLastErrorText();
         end;

@@ -68,6 +68,8 @@ table 50100 "Report Style Config"
         field(30; "Logo Chosen"; Boolean) { Caption = 'Logo placement chosen'; }
         // The theme the user picked; a Copilot suggestion or design direction starts from the neutral theme instead.
         field(31; "Own Theme"; Text[250]) { Caption = 'Own theme'; }
+        // A logo to try in the preview only. Never saved in Company Information; documents keep using that one.
+        field(32; "Preview Logo"; Blob) { Caption = 'Preview logo'; Subtype = Bitmap; Compressed = false; }
     }
 
     keys

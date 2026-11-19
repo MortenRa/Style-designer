@@ -49,6 +49,16 @@ page 50109 "Report Style Start Tabs"
                         UploadLogo();
                     end;
 
+                    trigger TryLogoRequested()
+                    begin
+                        TryLogo();
+                    end;
+
+                    trigger CompanyLogoRequested()
+                    begin
+                        UseCompanyLogo();
+                    end;
+
                     trigger LogoColorsComputed(Colors: Text)
                     begin
                         LogoColorsJson := Colors;
@@ -527,6 +537,9 @@ page 50109 "Report Style Start Tabs"
         UnknownThemeErr: Label 'There is no theme called "%1". Choose one from the list.', Comment = '%1 = the name typed';
         NoLogoTxt: Label 'Your company has no logo in Company Information yet. Upload one to see it on your documents.';
         UploadTitleTxt: Label 'Upload logo';
+        TryLogoTitleTxt: Label 'Try a logo in the preview';
+        LogoTooLargeErr: Label 'The picture is larger than 2 MB. Choose a smaller logo.';
+        TrialLogoAdviceTxt: Label 'The logo in the preview is a trial logo. Documents keep using the logo in Company Information; change it there to use the new one.';
         ImageFilterTxt: Label 'Images (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp', Locked = true;
         CompanyInformationTableTok: Label '79', Locked = true;
         NoCompanyInformationErr: Label 'Company Information is not set up, so the logo cannot be saved.';
@@ -565,20 +578,65 @@ page 50109 "Report Style Start Tabs"
         end;
     end;
 
-    // The company logo on the picker's small pages, or an upload prompt when there is none.
+    // The trial logo or else the company logo on the picker's small pages, or a prompt when there is none.
     local procedure ShowLogo()
     var
         Copilot: Codeunit "Report Style Copilot";
+        Base64Convert: Codeunit "Base64 Convert";
+        TempBlob: Codeunit "Temp Blob";
         BrandHex: Text;
         LogoBase64: Text;
+        IsTrial: Boolean;
     begin
         if not LogoPickerReady then
             exit;
-        Copilot.GetCompanyBrand(BrandHex, LogoBase64);
+        Rec.CalcFields("Preview Logo");
+        IsTrial := Rec."Preview Logo".HasValue();
+        if IsTrial then begin
+            TempBlob.FromRecord(Rec, Rec.FieldNo("Preview Logo"));
+            LogoBase64 := Base64Convert.ToBase64(TempBlob.CreateInStream());
+        end else
+            Copilot.GetCompanyBrand(BrandHex, LogoBase64);
+        CurrPage.LogoPicker.SetTrialLogo(IsTrial);
         if LogoBase64 = '' then
             CurrPage.LogoPicker.ShowNoLogo(NoLogoTxt)
         else
             CurrPage.LogoPicker.ShowLogo(LogoBase64, Rec."HF Logo");
+    end;
+
+    // A logo for the preview only: kept on the settings, put in Company Information just while the preview renders.
+    local procedure TryLogo()
+    var
+        TempBlob: Codeunit "Temp Blob";
+        PictureStream: InStream;
+        PictureOutStream: OutStream;
+        FileName: Text;
+    begin
+        Rec.Modify(true);
+        Commit();
+        if not UploadIntoStream(TryLogoTitleTxt, '', ImageFilterTxt, FileName, PictureStream) then
+            exit;
+        TempBlob.CreateOutStream(PictureOutStream);
+        CopyStream(PictureOutStream, PictureStream);
+        if TempBlob.Length() > 2000000 then
+            Error(LogoTooLargeErr);
+        Rec."Preview Logo".CreateOutStream(PictureOutStream);
+        CopyStream(PictureOutStream, TempBlob.CreateInStream());
+        if not Rec."Logo Chosen" then begin
+            Rec."Logo Chosen" := true;
+            Rec."Header Mode" := 'design';
+        end;
+        Rec.Modify(true);
+        ShowLogo();
+        RefreshAdvice();
+    end;
+
+    local procedure UseCompanyLogo()
+    begin
+        Clear(Rec."Preview Logo");
+        Rec.Modify(true);
+        ShowLogo();
+        RefreshAdvice();
     end;
 
     // Saves the picture in Company Information (Picture), read without a Base Application dependency.
@@ -933,8 +991,15 @@ page 50109 "Report Style Start Tabs"
     local procedure ComputeAdvice()
     var
         Advice: Codeunit "Report Style Advice";
+        Lines: TextBuilder;
     begin
         AdviceText := Advice.GetAdviceText(Rec);
+        Rec.CalcFields("Preview Logo");
+        if Rec."Preview Logo".HasValue() then begin
+            Lines.AppendLine('- ' + TrialLogoAdviceTxt);
+            Lines.Append(AdviceText);
+            AdviceText := Lines.ToText();
+        end;
         ComputeLookFrom();
         ComputeHeaderFooter();
         ComputeDirectionText();
