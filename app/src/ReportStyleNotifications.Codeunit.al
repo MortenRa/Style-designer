@@ -12,4 +12,10 @@ codeunit 50142 "Report Style Notifications"
     begin
         Designer.Run();
     end;
+
+    /// "Open the request" on the Quick Start notification about the user's own request.
+    procedure OpenApprovals(News: Notification)
+    begin
+        Page.Run(Page::"Report Style Approvals");
+    end;
 }

@@ -70,6 +70,9 @@ table 50100 "Report Style Config"
         field(31; "Own Theme"; Text[250]) { Caption = 'Own theme'; }
         // A logo to try in the preview only. Never saved in Company Information; documents keep using that one.
         field(32; "Preview Logo"; Blob) { Caption = 'Preview logo'; Subtype = Bitmap; Compressed = false; }
+        // The user's latest request and its status as last shown in the Quick Start notification, so news shows once.
+        field(33; "Seen Request No."; Integer) { Caption = 'Seen request no.'; }
+        field(34; "Seen Request Status"; Integer) { Caption = 'Seen request status'; }
     }
 
     keys

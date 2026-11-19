@@ -5,7 +5,7 @@ controladdin "Report Style Full Preview"
 {
     Scripts =
         'https://cdn-bc.dynamics.com/common/js/pdfjs-4.10.38/pdf.min.mjs',
-        'addin/pagepreview.js';
+        'addin/pagepreview2.js';
     StartupScript = 'addin/pagepreview-startup.js';
     StyleSheets = 'addin/pagepreview.css';
 

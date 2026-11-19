@@ -42,7 +42,6 @@ function StudioInit(root) {
         '      <div class="rss-view" role="tablist" aria-label="Preview">' +
         '        <button class="on" data-view="single" role="tab" aria-selected="true">This document</button>' +
         '        <button data-view="gallery" role="tab" aria-selected="false">Your documents</button></div>' +
-        '      <button class="rss-draft" data-draft="1" title="Describe a look and Copilot suggests three themes">' + SPARKLE + 'Draft with Copilot</button>' +
         '      <label class="rss-design-pick">View <select class="rss-select" id="rss-design">' + designOptions + '</select></label>' +
         '    </header>' +
         '    <div class="rss-stage" id="rss-stage">' +
@@ -57,9 +56,6 @@ function StudioInit(root) {
         '  <aside class="rss-copilot" id="rss-copilot" hidden></aside>' +
         '  <div class="rss-toast" id="rss-toast" hidden></div>' +
         '</div>';
-    root.querySelector('[data-draft]').addEventListener('click', function () {
-        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('DraftThemeRequested', []);
-    });
     root.querySelector('#rss-design').addEventListener('change', function (e) { setDesignView(+e.target.value); });
     // Delegated, because the panel is redrawn after every change.
     root.addEventListener('click', function (e) {
@@ -415,19 +411,15 @@ function renderPanel() {
     html += '<div class="rss-tabpanel" role="tabpanel">' + foldAll + (tab === 'theme' ? themeBody : headerBody) + moreLink + '</div>';
 
     var nothing = s.themeMode === 'keep' && s.headerMode === 'keep';
-    // The group of the selected document; "Apply to" can cover the whole group.
-    var docGroup = groupOfReport(s.reportId);
-    s.applyGroup = docGroup ? docGroup.id : '';
-    if (s.applyTo === 'group' && !docGroup) s.applyTo = 'layout';
+    // The designer works on the document in the preview. Which documents get the design is chosen by the
+    // administrator when activating it on Theme Approvals, so there is no "Use on" choice here.
+    s.applyTo = 'layout';
+    s.applyGroup = '';
     var applyBar = '<div class="rss-applybar">' +
         '<div class="rss-summary">' + summaryText() + '</div>' +
-        '<div class="rss-targets">Use on ' +
-        '<label class="rss-radio"><input type="radio" name="rss-target" value="layout"' + (s.applyTo !== 'company' && s.applyTo !== 'group' ? ' checked' : '') + '> this document</label>' +
-        (docGroup ? '<label class="rss-radio" title="Every Body layout of the ' + docGroup.reports.length + ' reports in this group"><input type="radio" name="rss-target" value="group"' + (s.applyTo === 'group' ? ' checked' : '') + '> all ' + esc(docGroup.caption.toLowerCase()) + ' (' + docGroup.reports.length + ')</label>' : '') +
-        '<label class="rss-radio"><input type="radio" name="rss-target" value="company"' + (s.applyTo === 'company' ? ' checked' : '') + '> company default</label></div>' +
         '<div class="rss-apply-actions">' +
-        (s.themeMode === 'custom' ? '<button class="rss-secondary" data-save="theme" title="Saves the theme as a draft. Nothing changes for any report.">Save as draft</button>' : '') +
-        '<button class="rss-primary" data-save="submit" title="Saves the design and sends it for approval. Customers receive the new look only after it is approved and activated on the Theme Approvals page."' + (nothing ? ' disabled' : '') + '>Send for approval</button></div>' +
+        '<button class="rss-secondary" data-save="draft" title="Saves all your choices as a named draft to continue later. Nothing is sent, and nothing changes for any document.">Save as draft</button>' +
+        '<button class="rss-primary" data-save="submit" title="Asks what to send (theme, header and footer, or both) and the names, then sends it for approval. An administrator approves it and chooses the documents when activating it on Theme Approvals."' + (nothing ? ' disabled' : '') + '>Send for approval…</button></div>' +
         '</div>';
 
     var panel = byId('rss-panel');
@@ -634,9 +626,6 @@ function wirePanel(panel) {
         renderPanel();
         requestPreview(0);
     });
-    panel.querySelectorAll('input[name="rss-target"]').forEach(function (r) {
-        r.addEventListener('change', function () { s.applyTo = r.value; renderPanel(); requestPreview(0); });
-    });
     on(panel, '[data-hf]', function (el) { s[el.getAttribute('data-hf')] = el.getAttribute('data-val'); renderPanel(); requestPreview(0); });
     var hfDate = byId('rss-hfdate');
     if (hfDate) hfDate.addEventListener('change', function (e) { s.hfShowDate = e.target.checked; requestPreview(0); });
@@ -824,7 +813,6 @@ var GALLERY_GROUP_MAX = 12;   // a document group
 // Typical customer-facing documents, preferred when the gallery is filled for the first time.
 var GALLERY_PREFERRED = [1306, 1305, 1304, 1307, 1308, 1316, 1322, 1320, 1303, 117, 116, 206, 205, 204];
 var gallery = { cache: {}, queue: [], jobs: {}, seq: 0, timer: null, poll: null, started: 0, adding: false, find: '', compare: null, cmp: null, expected: {} };
-var COMPARE_MAX_DOCS = 4;     // a comparison renders every suggestion on every document, so keep the grid small
 var GALLERY_TIMEOUT_MS = 120000;
 
 // Applies one of the ten views: sets its classes, then shows the gallery or the single preview again.
@@ -929,7 +917,8 @@ function renderGallery() {
     if (!host || studio.view !== 'gallery') return;
     var docs = galleryDocs(), style = styleKey(), groupId = galleryGroup(), groups = studio.data.groups || [];
     var group = groups.filter(function (g) { return g.id === groupId; })[0];
-    if (gallery.compare) { renderComparison(docs.slice(0, COMPARE_MAX_DOCS)); return; }
+    // Side by side renders only the chosen document, so every document can be offered; the grid picks its own few.
+    if (gallery.compare) { renderComparison(docs); return; }
     gallery.queue = [];
     var tabs = groups.map(function (g) {
         return '<button class="' + (g.id === groupId ? 'on' : '') + '" data-ggroup="' + g.id + '"' + (g.reports.length ? '' : ' disabled') + '>' +
@@ -1103,12 +1092,20 @@ var COMPARE_GRID_MAX = 3;
 function renderCompareGrid(docs) {
     var host = byId('rss-gallery'), list = gallery.compare, cmp = gallery.cmp, cells = [];
     if (!cmp.rows) cmp.rows = list.slice(0, COMPARE_GRID_MAX).map(function (_, k) { return k; });
-    var cols = docs.slice(0, COMPARE_GRID_MAX);
+    // Every theme is rendered on every chosen document, so the grid takes a few of each; the user picks which.
+    cmp.cols = (cmp.cols || []).filter(function (i) { return i < docs.length; });
+    if (!cmp.cols.length) cmp.cols = docs.slice(0, COMPARE_GRID_MAX).map(function (_, i) { return i; });
+    var cols = cmp.cols.map(function (i) { return docs[i]; });
     var chips = list.map(function (g, k) {
         var on = cmp.rows.indexOf(k) >= 0;
         return '<button class="rss-chip' + (on ? ' on' : '') + '" data-cmp-row="' + k + '" aria-pressed="' + on + '">' + esc(g.name) + '</button>';
     }).join('');
+    var docChips = docs.map(function (l, i) {
+        var on = cmp.cols.indexOf(i) >= 0;
+        return '<button class="rss-chip' + (on ? ' on' : '') + '" data-cmp-col="' + i + '" aria-pressed="' + on + '">' + esc(l.reportName) + '</button>';
+    }).join('');
     var html = compareHead('grid') +
+        '<div class="rss-cmp-pick"><div><span>Documents (up to ' + COMPARE_GRID_MAX + ')</span>' + docChips + '</div></div>' +
         '<div class="rss-cmp-pick"><div><span>Themes (up to ' + COMPARE_GRID_MAX + ')</span>' + chips + '</div></div>' +
         '<div class="rss-cmp-grid" style="grid-template-columns: 140px repeat(' + cols.length + ', minmax(0, 1fr))"><div></div>' +
         cols.map(function (l) { return '<div class="rss-cmp-head"><b>' + esc(l.reportName) + '</b><small>' + esc(l.caption || l.name) + '</small></div>'; }).join('');
@@ -1129,6 +1126,14 @@ function renderCompareGrid(docs) {
             var k = +b.getAttribute('data-cmp-row'), at = cmp.rows.indexOf(k);
             if (at >= 0) { if (cmp.rows.length > 1) cmp.rows.splice(at, 1); }
             else { cmp.rows.push(k); if (cmp.rows.length > COMPARE_GRID_MAX) cmp.rows.shift(); }
+            renderGallery();
+        });
+    });
+    host.querySelectorAll('[data-cmp-col]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var i = +b.getAttribute('data-cmp-col'), at = cmp.cols.indexOf(i);
+            if (at >= 0) { if (cmp.cols.length > 1) cmp.cols.splice(at, 1); }
+            else { cmp.cols.push(i); if (cmp.cols.length > COMPARE_GRID_MAX) cmp.cols.shift(); }
             renderGallery();
         });
     });
@@ -1274,6 +1279,8 @@ function showGalleryResult(index, result) {
             return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport, transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null }).promise.then(function () {
                 box.innerHTML = '';
                 box.appendChild(canvas);
+                // The cell now takes the page's own shape, so a landscape page leaves no empty space below it.
+                box.classList.add('rss-gal-done');
                 var more = byId('rss-gal-pages-' + index);
                 if (more) more.textContent = pdf.numPages > 1 ? pdf.numPages + ' pages' : '1 page';
                 updateGalleryStatus();

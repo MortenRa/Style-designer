@@ -8,9 +8,10 @@ page 50102 "Report Style Designer"
     Caption = 'Theme Designer';
     // A Card page, not UserControlHost: that page type shows an "Add-in" label above the title.
     PageType = Card;
-    UsageCategory = Administration;
+    // Not in search: it opens from Quick Start (Open designer), the one way in.
+    AboutTitle = 'The full designer';
+    AboutText = 'Here you see your look on one document or on all your documents, compare themes side by side, and fine-tune colours, fonts, header and footer. Save as draft keeps your work; Send for approval starts the way to your customers.';
     ApplicationArea = All;
-    AdditionalSearchTerms = 'report style designer, report theme, report design, document design, header, footer, colours, colors, fonts, branding, layout style';
     Editable = false;
 
     layout
@@ -44,19 +45,20 @@ page 50102 "Report Style Designer"
                         CurrPage.Designer.ShowPreviewError(Seq, Runner.GetErrorText());
                 end;
 
+                // Save as draft and Send for approval ask for names in a dialog, as on Quick Start.
                 trigger SaveRequested(State: Text; Mode: Text)
                 var
-                    Runner: Codeunit "Report Style Designer Runner";
+                    Drafts: Codeunit "Report Style Drafts";
                 begin
                     DesignerMgt.ApplyState(Config, State);
                     Commit();
-                    Runner.SetSaveMode(Mode);
-                    if Runner.Run(Config) then begin
-                        CurrPage.Designer.Notify(Runner.GetResultText(), 'success');
-                        Config.Get();
-                        CurrPage.Designer.Init(DesignerMgt.BuildStudioData(Config, Suggestions));
+                    if Mode = 'submit' then begin
+                        if not Drafts.SendForApproval(Config) then
+                            exit;
                     end else
-                        CurrPage.Designer.Notify(GetLastErrorText(), 'error');
+                        Drafts.SaveDraft(Config);
+                    Config.Get(Config."Primary Key");
+                    CurrPage.Designer.Init(DesignerMgt.BuildStudioData(Config, Suggestions));
                 end;
 
                 trigger DraftThemeRequested()
@@ -158,11 +160,11 @@ page 50102 "Report Style Designer"
             action(DraftThemeAction)
             {
                 ApplicationArea = All;
-                // Hidden: the designer has one Copilot entry, "Draft with Copilot", at the top right of the preview.
-                Caption = 'Draft a theme';
-                ToolTip = 'Describe the look you want and get three themes to preview. Nothing is applied until you choose Apply.';
+                // The same Copilot button as on Quick Start, in Business Central's standard place.
+                Caption = 'Draft with Copilot';
+                ToolTip = 'Describe the look you want, and Copilot suggests themes built on your logo and brand colours.';
                 Image = Sparkle;
-                Visible = false;
+                Visible = CopilotAvailable;
 
                 trigger OnAction()
                 begin

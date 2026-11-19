@@ -39,7 +39,7 @@ codeunit 50126 "Gallery Smoke Test"
 
         BackgroundBatch();
 
-        After.Get();
+        DesignerMgt.GetConfig(After);
         if (After."Target Report ID" <> Config."Target Report ID") or (After."Target Layout Name" <> Config."Target Layout Name") then
             Error('The gallery changed the selected document: %1 %2', After."Target Report ID", After."Target Layout Name");
         if After."Custom Colors" <> Config."Custom Colors" then
@@ -54,6 +54,7 @@ codeunit 50126 "Gallery Smoke Test"
     local procedure BackgroundBatch()
     var
         Config: Record "Report Style Config";
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
         Job: Record "Report Style Gallery Job";
         ReportLayoutList: Record "Report Layout List";
         GalleryJobs: Codeunit "Report Style Gallery Jobs";
@@ -63,7 +64,7 @@ codeunit 50126 "Gallery Smoke Test"
         DocsText: Text;
         Waited: Integer;
     begin
-        Config.Get();
+        DesignerMgt.GetConfig(Config);
         ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Body);
         // Temporary preview copies are skipped, as in the designer's own lists.
         ReportLayoutList.SetFilter(Name, '<>Preview *');

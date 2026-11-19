@@ -23,6 +23,7 @@ codeunit 50105 "Report Style Designer Runner"
         ErrorText: Text;
         CleanupErrorText: Text;
         BusyErr: Label 'This report is being previewed in another window. Try again in a moment.';
+        PreviewFileNameTxt: Label '%1 - preview.%2', Comment = '%1 = report name, %2 = file extension';
 
     procedure SetSaveMode(NewSaveMode: Text)
     begin
@@ -32,6 +33,33 @@ codeunit 50105 "Report Style Designer Runner"
     /// Renders a per-user preview. Cleanup always runs, also when rendering fails hard (for example a deadlock).
     /// Call without an open write transaction.
     procedure Preview(var Config: Record "Report Style Config"): Boolean
+    begin
+        exit(PreviewAs(Config, ReportFormat::Pdf));
+    end;
+
+    /// Renders the same preview as a Word or PDF file and downloads it. Nothing is saved for other users.
+    /// Call without an open write transaction.
+    procedure DownloadPreview(var Config: Record "Report Style Config"; Format: ReportFormat)
+    var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        Output: Codeunit "Temp Blob";
+        OutputInStream: InStream;
+        FileName: Text;
+        Extension: Text;
+    begin
+        if not PreviewAs(Config, Format) then
+            Error(ErrorText);
+        if Format = ReportFormat::Word then
+            Extension := 'docx'
+        else
+            Extension := 'pdf';
+        FileName := StrSubstNo(PreviewFileNameTxt, DesignerMgt.GetReportCaption(Config), Extension);
+        GetPdf(Output);
+        Output.CreateInStream(OutputInStream);
+        DownloadFromStream(OutputInStream, '', '', '', FileName);
+    end;
+
+    local procedure PreviewAs(var Config: Record "Report Style Config"; Format: ReportFormat): Boolean
     var
         PreviewStep: Codeunit "Report Style Preview Step";
         Attempt: Integer;
@@ -56,6 +84,7 @@ codeunit 50105 "Report Style Designer Runner"
             end;
         if Succeeded then begin
             PreviewStep.SetStep('render');
+            PreviewStep.SetFormat(Format);
             Succeeded := PreviewStep.Run(Config);
             // With a trial logo the render rolls itself back on purpose; the PDF is kept in the step.
             if not Succeeded and PreviewStep.RenderedWithPreviewLogo() then

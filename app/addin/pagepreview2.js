@@ -1,6 +1,6 @@
 // Page 1 of the preview PDF, drawn with pdf.js at the screen's resolution.
 // A click steps through: whole page -> full width -> larger -> whole page.
-var preview = { page: null, zoom: 0, tooltip: '', opensFull: false, suggestion: null };
+var preview = { page: null, zoom: 0, tooltip: '', opensFull: false, suggestion: null, note: '' };
 var ZOOMS = ['page', 'width', 'large'];
 
 function ShowPdf(pdfBase64, tooltip) {
@@ -32,6 +32,35 @@ function ShowMessage(message) {
     p.className = 'pp-msg';
     p.textContent = message;
     replaceContent(p);
+}
+
+function SetNote(note) {
+    preview.note = note || '';
+    body();
+    renderNote();
+}
+function renderNote() {
+    var el = document.getElementById('pp-note');
+    if (!el) return;
+    el.hidden = !preview.note;
+    el.textContent = preview.note || '';
+}
+
+// The server cannot update the page while it renders, so the busy text is shown first and the render is asked for after.
+function ShowBusy(message, requestRender) {
+    var b = body();
+    var old = b.querySelector('.pp-busy');
+    if (old) old.remove();
+    var busy = document.createElement('div');
+    busy.className = 'pp-busy' + (b.querySelector('canvas') ? ' over' : '');
+    busy.setAttribute('role', 'status');
+    busy.innerHTML = '<span class="pp-spin" aria-hidden="true"></span><span></span>';
+    busy.lastChild.textContent = message;
+    if (!b.querySelector('canvas')) b.innerHTML = '';
+    b.appendChild(busy);
+    if (requestRender) requestAnimationFrame(function () {
+        requestAnimationFrame(function () { Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('RenderRequested', []); });
+    });
 }
 
 function draw() {
@@ -78,9 +107,10 @@ function body() {
     var root = document.getElementById('controlAddIn');
     var b = document.getElementById('pp-body');
     if (!b) {
-        root.innerHTML = '<div id="pp-bar" class="pp-bar" hidden></div><div id="pp-body" class="pp-body"></div>';
+        root.innerHTML = '<div id="pp-bar" class="pp-bar" hidden></div><div id="pp-note" class="pp-note" hidden></div><div id="pp-body" class="pp-body"></div>';
         b = document.getElementById('pp-body');
         renderBar();
+        renderNote();
     }
     return b;
 }

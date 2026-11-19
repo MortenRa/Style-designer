@@ -9,6 +9,7 @@ codeunit 50137 "Advice Probe"
     var
         Config: Record "Report Style Config";
         Advice: Codeunit "Report Style Advice";
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
         Copilot: Codeunit "Report Style Copilot";
         Picture: Codeunit Image;
         BrandHex: Text;
@@ -17,7 +18,7 @@ codeunit 50137 "Advice Probe"
         Copilot.GetCompanyBrand(BrandHex, LogoBase64);
         if LogoBase64 <> '' then
             Picture.FromBase64(LogoBase64);
-        Config.Get();
+        DesignerMgt.GetConfig(Config);
         Config."HF Logo" := 'right';
         Message('LOGO %1 x %2 | ADVICE (logo right): %3', Picture.GetWidth(), Picture.GetHeight(), Advice.GetAdviceText(Config));
     end;

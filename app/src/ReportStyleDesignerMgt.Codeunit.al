@@ -78,9 +78,21 @@ codeunit 50104 "Report Style Designer Mgt."
         exit(Result);
     end;
 
+    /// The current user's own design in progress. Each user has one, so two designers never overwrite each other.
+    /// The first time, it starts from the design all users shared before (key blank), so no work is lost.
     procedure GetConfig(var Config: Record "Report Style Config")
+    var
+        Shared: Record "Report Style Config";
+        UserKey: Code[10];
     begin
-        if Config.Get() then begin
+        UserKey := ConfigKeyOfUser();
+        if not Config.Get(UserKey) then
+            if Shared.Get('') then begin
+                Config := Shared;
+                Config."Primary Key" := UserKey;
+                Config.Insert();
+            end;
+        if Config.Get(UserKey) then begin
             // Settings saved before "Design your own" existed get its defaults once.
             if Config."HF Name" = '' then begin
                 Config."HF Name" := 'Custom Header/Footer';
@@ -90,8 +102,15 @@ codeunit 50104 "Report Style Designer Mgt."
             exit;
         end;
         Config.Init();
+        Config."Primary Key" := UserKey;
         Config."Base Theme" := 'DefaultTheme';
         Config.Insert();
+    end;
+
+    // The key of the user's design: the first 10 characters of the user's security ID (the key field is Code[10]).
+    local procedure ConfigKeyOfUser(): Code[10]
+    begin
+        exit(CopyStr(DelChr(Format(UserSecurityId()), '=', '{}-'), 1, 10));
     end;
 
     procedure BuildStudioData(var Config: Record "Report Style Config"): Text
@@ -232,13 +251,13 @@ codeunit 50104 "Report Style Designer Mgt."
         Commit();
     end;
 
-    /// Preview, step 2: renders the report to PDF.
-    procedure PreviewRender(var Config: Record "Report Style Config"; var Pdf: Codeunit "Temp Blob")
+    /// Preview, step 2: renders the report, as PDF for the on-screen preview or as Word/PDF for a download.
+    procedure PreviewRender(var Config: Record "Report Style Config"; Format: ReportFormat; var Output: Codeunit "Temp Blob")
     var
-        PdfOutStream: OutStream;
+        OutputOutStream: OutStream;
     begin
-        Pdf.CreateOutStream(PdfOutStream);
-        Report.SaveAs(Config."Target Report ID", GetParameters(Config), ReportFormat::Pdf, PdfOutStream);
+        Output.CreateOutStream(OutputOutStream);
+        Report.SaveAs(Config."Target Report ID", GetParameters(Config), Format, OutputOutStream);
     end;
 
     /// Preview, step 3: removes everything step 1 created and restores the user's own selection. Always runs.
@@ -254,6 +273,7 @@ codeunit 50104 "Report Style Designer Mgt."
     var
         ReportLayoutList: Record "Report Layout List";
         TenantReportLayout: Record "Tenant Report Layout";
+        LayoutCleaner: Codeunit "Report Style Layout Cleaner";
         Body: Codeunit "Temp Blob";
         BodyOutStream: OutStream;
     begin
@@ -263,6 +283,8 @@ codeunit 50104 "Report Style Designer Mgt."
         ReportLayoutList.FindFirst();
         Body.CreateOutStream(BodyOutStream);
         ReportLayoutList.Layout.ExportStream(BodyOutStream);
+        // The copy is a tenant layout: a link to a template file that the app layout may carry is not allowed there.
+        LayoutCleaner.RemoveExternalReferences(Body);
 
         TenantReportLayout.Init();
         TenantReportLayout."Report ID" := Config."Target Report ID";
@@ -359,6 +381,18 @@ codeunit 50104 "Report Style Designer Mgt."
         if IsHeader then
             exit(Cfg."Header Part Name");
         exit(Cfg."Theme Part Name");
+    end;
+
+    /// The header/footer the document in the preview uses today (from the document, report, company or default), or ''.
+    procedure CurrentHeaderFooter(Config: Record "Report Style Config"): Text
+    var
+        LayoutKey: Text[250];
+        Level: Integer;
+    begin
+        if Config."Target Report ID" = 0 then
+            exit('');
+        LayoutKey := CopyStr(ConfiguratorMgt.EncodePartName(Config."Target Layout App ID", Config."Target Layout Name"), 1, 250);
+        exit(PartName(FirstPart(Config."Target Report ID", LayoutKey, true, Level)));
     end;
 
     local procedure AddCurrentParts(var Item: JsonObject; ReportID: Integer; LayoutKey: Text[250])

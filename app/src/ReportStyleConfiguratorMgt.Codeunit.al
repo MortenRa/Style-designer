@@ -220,13 +220,18 @@ codeunit 50102 "Report Style Configurator Mgt."
     procedure StorePartOfKind(ThemeName: Text[250]; Generated: Codeunit "Temp Blob"; IsHeaderFooter: Boolean)
     var
         TenantReportLayout: Record "Tenant Report Layout";
+        LayoutCleaner: Codeunit "Report Style Layout Cleaner";
         Prepared: Codeunit "Temp Blob";
+        Cleaned: Codeunit "Temp Blob";
         PreparedInStream: InStream;
         EmptyGuid: Guid;
     begin
+        // A copied base design can carry a link to a template file; tenant layouts may not have one.
+        Cleaned := Generated;
+        LayoutCleaner.RemoveExternalReferences(Cleaned);
         // Run the same validation/preparation the insert trigger does, so an update in place gets it too.
         PreparedInStream := Prepared.CreateInStream(TextEncoding::UTF8);
-        if not Report.ValidateAndPrepareLayout(TenantReportDefaultsId(), Generated.CreateInStream(TextEncoding::UTF8), PreparedInStream, ReportLayoutType::Word) then
+        if not Report.ValidateAndPrepareLayout(TenantReportDefaultsId(), Cleaned.CreateInStream(TextEncoding::UTF8), PreparedInStream, ReportLayoutType::Word) then
             Error(GetLastErrorText());
 
         if TenantReportLayout.Get(TenantReportDefaultsId(), ThemeName, EmptyGuid) then begin

@@ -4,95 +4,124 @@ using System.Reflection;
 using System.Text;
 using System.Utilities;
 
-/// Quick Start with collapsible tabs, to compare with the one-column Quick Start (page 50105): the logo first, then
-/// the theme and the header/footer, each with the document's preview next to its choices, then Save.
+/// Quick Start, with collapsible tabs: your brand (logo, design direction and recommendations) first,
+/// then the theme and the header/footer, each with the document's preview next to its choices, then Send for approval.
 page 50109 "Report Style Start Tabs"
 {
-    Caption = 'Theme Designer - Quick Start (tabs)';
+    Caption = 'Theme Designer - Quick Start';
     PageType = Card;
     SourceTable = "Report Style Config";
     UsageCategory = Administration;
+    AboutTitle = 'Give your documents your look';
+    AboutText = 'Choose your logo, a theme, and a header and footer, and see the result on your own document right away. It is only a preview: nothing changes for your customers until the design is approved and activated.';
     ApplicationArea = All;
-    AdditionalSearchTerms = 'report style, report theme, report design, document design, colours, fonts, start, tabs';
+    AdditionalSearchTerms = 'theme designer, report style, report theme, report design, document design, header, footer, colours, colors, fonts, logo, branding, start';
 
     layout
     {
         area(Content)
         {
-            // Four FastTabs, each one can be collapsed: the logo first, then the theme and the header/footer,
-            // each with the same document's preview next to its choices, and Save last.
+            // FastTabs that can each be collapsed: your brand (logo, direction, recommendations) first, then the theme and the header/footer,
+            // each with the same document's preview next to its choices, and Send for approval last.
             group(LogoGroup)
             {
-                Caption = 'Your logo';
-                InstructionalText = 'Start with your logo. Choose where it goes on your documents, or a design direction that sets everything in one step.';
+                Caption = 'Your brand';
+                AboutTitle = 'Start with your brand';
+                AboutText = 'Place your logo, or pick a design direction that sets colours, fonts, tables, header and footer in one step. Recommendations here warn when a choice can go wrong, for example when printing.';
 
-                usercontrol(LogoPicker; "Report Style Logo Picker")
+                // Two columns: the logo on the left; the design direction and the recommendations on the right.
+                group(BrandLogo)
                 {
-                    ApplicationArea = All;
-
-                    trigger Ready()
-                    begin
-                        LogoPickerReady := true;
-                        ShowLogo();
-                    end;
-
-                    trigger PlacementChosen(Placement: Text)
-                    begin
-                        Rec."HF Logo" := CopyStr(Placement, 1, MaxStrLen(Rec."HF Logo"));
-                        Rec."Logo Chosen" := true;
-                        Rec."Header Mode" := 'design';
-                        RefreshAdvice();
-                    end;
-
-                    trigger UploadRequested()
-                    begin
-                        UploadLogo();
-                    end;
-
-                    trigger TryLogoRequested()
-                    begin
-                        TryLogo();
-                    end;
-
-                    trigger CompanyLogoRequested()
-                    begin
-                        UseCompanyLogo();
-                    end;
-
-                    trigger LogoColorsComputed(Colors: Text)
-                    begin
-                        LogoColorsJson := Colors;
-                    end;
-                }
-                field(Direction; Rec.Direction)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Design direction';
-                    ToolTip = 'A finished look to start from. It sets the colours, fonts, tables, header and footer in one step. You can change every detail in the tabs below.';
-
-                    trigger OnValidate()
-                    var
-                        Directions: Codeunit "Report Style Directions";
-                    begin
-                        Directions.Apply(Rec);
-                        LeaveSuggestion();
-                        ShowLogo();
-                        RefreshAdvice();
-                    end;
-                }
-                field(DirectionDescription; DirectionText)
-                {
-                    ApplicationArea = All;
                     ShowCaption = false;
-                    Editable = false;
-                    MultiLine = true;
-                    Style = Subordinate;
-                    ToolTip = 'What the chosen direction looks like.';
+                    InstructionalText = 'Start with your logo. Choose where it goes on your documents, or a design direction that sets everything in one step.';
+
+                    usercontrol(LogoPicker; "Report Style Logo Picker")
+                    {
+                        ApplicationArea = All;
+
+                        trigger Ready()
+                        begin
+                            LogoPickerReady := true;
+                            ShowLogo();
+                        end;
+
+                        trigger PlacementChosen(Placement: Text)
+                        begin
+                            Rec."HF Logo" := CopyStr(Placement, 1, MaxStrLen(Rec."HF Logo"));
+                            Rec."Logo Chosen" := true;
+                            Rec."Header Mode" := 'design';
+                            RefreshAdvice();
+                        end;
+
+                        trigger UploadRequested()
+                        begin
+                            UploadLogo();
+                        end;
+
+                        trigger TryLogoRequested()
+                        begin
+                            TryLogo();
+                        end;
+
+                        trigger CompanyLogoRequested()
+                        begin
+                            UseCompanyLogo();
+                        end;
+
+                        trigger LogoColorsComputed(Colors: Text)
+                        begin
+                            LogoColorsJson := Colors;
+                        end;
+                    }
+                }
+                group(BrandDirection)
+                {
+                    ShowCaption = false;
+                    field(Direction; Rec.Direction)
+                    {
+                        ApplicationArea = All;
+                        Caption = 'Design direction';
+                        ToolTip = 'A finished look to start from. It sets the colours, fonts, tables, header and footer in one step. You can change every detail in the tabs below.';
+
+                        trigger OnValidate()
+                        var
+                            Directions: Codeunit "Report Style Directions";
+                        begin
+                            Directions.Apply(Rec);
+                            LeaveSuggestion();
+                            ShowLogo();
+                            RefreshAdvice();
+                        end;
+                    }
+                    field(DirectionDescription; DirectionText)
+                    {
+                        ApplicationArea = All;
+                        ShowCaption = false;
+                        Editable = false;
+                        MultiLine = true;
+                        Style = Subordinate;
+                        ToolTip = 'What the chosen direction looks like.';
+                    }
+                    group(BrandAdvice)
+                    {
+                        Caption = 'Recommendations';
+
+                        field(AdviceText; AdviceText)
+                        {
+                            ApplicationArea = All;
+                            ShowCaption = false;
+                            Editable = false;
+                            MultiLine = true;
+                            ToolTip = 'Soft recommendations based on the settings. They explain a likely problem; you can still send the design for approval.';
+                        }
+                    }
                 }
             }
             group(ThemeTab)
             {
                 Caption = 'Theme';
+                AboutTitle = 'Colours and fonts';
+                AboutText = 'The theme sets the colours, fonts and table style of the document. The preview next to it shows every change on your own data.';
                 group(ThemeChoices)
                 {
                     ShowCaption = false;
@@ -212,6 +241,7 @@ page 50109 "Report Style Start Tabs"
                         begin
                             ViewerReady := true;
                             CurrPage.PreviewViewer.SetOpenOnClick(true);
+                            CurrPage.PreviewViewer.SetNote(PreviewOnlyTxt);
                             if LastPdfBase64 <> '' then
                                 CurrPage.PreviewViewer.ShowPdf(LastPdfBase64, ZoomTipTxt)
                             else
@@ -227,6 +257,11 @@ page 50109 "Report Style Start Tabs"
                         trigger UseMyThemeRequested()
                         begin
                             UseMyTheme();
+                        end;
+
+                        trigger RenderRequested()
+                        begin
+                            RenderPreview();
                         end;
 
                         trigger FullViewRequested()
@@ -247,6 +282,8 @@ page 50109 "Report Style Start Tabs"
             group(HeaderFooterTab)
             {
                 Caption = 'Header and footer';
+                AboutTitle = 'What is at the top and bottom';
+                AboutText = 'Choose where the page number goes and what the footer shows: your contact details, your bank details, or nothing.';
                 group(HeaderFooterChoices)
                 {
                     ShowCaption = false;
@@ -360,6 +397,7 @@ page 50109 "Report Style Start Tabs"
                         begin
                             HFViewerReady := true;
                             CurrPage.HFPreviewViewer.SetOpenOnClick(true);
+                            CurrPage.HFPreviewViewer.SetNote(PreviewOnlyTxt);
                             if LastPdfBase64 <> '' then
                                 CurrPage.HFPreviewViewer.ShowPdf(LastPdfBase64, ZoomTipTxt)
                             else
@@ -372,6 +410,11 @@ page 50109 "Report Style Start Tabs"
 
                         trigger UseMyThemeRequested()
                         begin
+                        end;
+
+                        trigger RenderRequested()
+                        begin
+                            RenderPreview();
                         end;
 
                         trigger FullViewRequested()
@@ -387,36 +430,6 @@ page 50109 "Report Style Start Tabs"
                         Style = Subordinate;
                         ToolTip = 'What the preview shows, or why it could not be shown.';
                     }
-                }
-            }
-            group(SaveGroup)
-            {
-                Caption = 'Save';
-                field(ThemeName; Rec."Theme Name")
-                {
-                    ApplicationArea = All;
-                    Caption = 'Name';
-                    ToolTip = 'The name the theme is saved under. Approvers see it on the Theme Approvals page.';
-                }
-                field(UseOn; UseOn)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Use on';
-                    OptionCaption = 'This document,All documents in its group,Company default';
-                    ToolTip = 'Which documents get the new look when it is approved and activated: the document in the preview, every document of its group (customer, vendor or internal), or the company default.';
-
-                    trigger OnValidate()
-                    begin
-                        SetUseOn();
-                    end;
-                }
-                field(AdviceText; AdviceText)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Recommendations';
-                    Editable = false;
-                    MultiLine = true;
-                    ToolTip = 'Soft recommendations based on the settings. They explain a likely problem; you can still send the design for approval.';
                 }
             }
         }
@@ -443,7 +456,17 @@ page 50109 "Report Style Start Tabs"
         area(Promoted)
         {
             actionref(UpdatePreview_Promoted; UpdatePreviewAction) { }
+            group(DownloadPreview_Promoted)
+            {
+                Caption = 'Download preview';
+                Image = Download;
+
+                actionref(DownloadPreviewPdf_Promoted; DownloadPreviewPdf) { }
+                actionref(DownloadPreviewWord_Promoted; DownloadPreviewWord) { }
+            }
             actionref(SendForApproval_Promoted; SendForApproval) { }
+            actionref(SaveAsDraft_Promoted; SaveAsDraft) { }
+            actionref(MyDrafts_Promoted; MyDrafts) { }
             actionref(OpenDesigner_Promoted; OpenDesigner) { }
         }
         area(Processing)
@@ -463,30 +486,86 @@ page 50109 "Report Style Start Tabs"
                     UpdatePreview();
                 end;
             }
+            action(DownloadPreviewPdf)
+            {
+                ApplicationArea = All;
+                Caption = 'Download as PDF';
+                AboutTitle = 'Share it before you decide';
+                AboutText = 'Download the preview as PDF or Word and send it to a colleague or your manager. Nothing is saved or sent for approval.';
+                ToolTip = 'Download the chosen document with these choices as a PDF file. Nothing is saved or changed for other users.';
+                Image = SendAsPDF;
+
+                trigger OnAction()
+                begin
+                    DownloadPreview(ReportFormat::Pdf);
+                end;
+            }
+            action(DownloadPreviewWord)
+            {
+                ApplicationArea = All;
+                Caption = 'Download as Word';
+                ToolTip = 'Download the chosen document with these choices as a Word file. Nothing is saved or changed for other users.';
+                Image = Word;
+
+                trigger OnAction()
+                begin
+                    DownloadPreview(ReportFormat::Word);
+                end;
+            }
             action(SendForApproval)
             {
                 ApplicationArea = All;
-                Caption = 'Send for approval';
-                ToolTip = 'Save the theme and header/footer and send them for approval. Customers see the new look only after it is approved and activated on the Theme Approvals page.';
+                Caption = 'Send for approval…';
+                AboutTitle = 'Nothing changes until it is approved';
+                AboutText = 'Changing the company''s documents is not one person''s decision. You send a request; an approver looks at it, approves it and activates it on the Theme Approvals page.';
+                ToolTip = 'Choose what to send (the theme, the header and footer, or both), give it a name and choose the documents. Customers see the new look only after it is approved and activated on the Theme Approvals page.';
                 Image = SendApprovalRequest;
 
                 trigger OnAction()
                 var
-                    Runner: Codeunit "Report Style Designer Runner";
+                    Drafts: Codeunit "Report Style Drafts";
                 begin
-                    SetUseOn();
                     Rec.Modify(true);
                     Commit();
-                    Runner.SetSaveMode('submit');
-                    if not Runner.Run(Rec) then
-                        Error(GetLastErrorText());
-                    Message(Runner.GetResultText());
+                    if not Drafts.SendForApproval(Rec) then
+                        exit;
+                    Rec.Get(Rec."Primary Key");
+                    ComputeAdvice();
+                    CurrPage.Update(false);
                 end;
+            }
+            action(SaveAsDraft)
+            {
+                ApplicationArea = All;
+                Caption = 'Save as draft…';
+                AboutTitle = 'Keep an idea for later';
+                AboutText = 'Save as draft keeps your logo, theme and header/footer choices under a name. Find them again in My drafts.';
+                ToolTip = 'Save all your choices under a name, to continue later or to keep an idea. Nothing is sent, and nothing changes for any document.';
+                Image = Save;
+
+                trigger OnAction()
+                var
+                    Drafts: Codeunit "Report Style Drafts";
+                begin
+                    Rec.Modify(true);
+                    Commit();
+                    Drafts.SaveDraft(Rec);
+                end;
+            }
+            action(MyDrafts)
+            {
+                ApplicationArea = All;
+                Caption = 'My drafts';
+                ToolTip = 'See your saved drafts. Open one to continue working on it, or send it for approval.';
+                Image = Documents;
+                RunObject = page "Report Style Drafts";
             }
             action(OpenDesigner)
             {
                 ApplicationArea = All;
                 Caption = 'Open designer';
+                AboutTitle = 'See all your documents';
+                AboutText = 'The designer shows the look on all your documents side by side, and lets you compare themes before you choose.';
                 ToolTip = 'See your documents with these choices and send the design for approval. More options are in the designer.';
 
                 trigger OnAction()
@@ -517,14 +596,14 @@ page 50109 "Report Style Start Tabs"
         HFFooterNoneTxt: Label 'No footer.';
         HFFooterPageOnlyTxt: Label 'Footer: page number only.';
         HFFooterPageTxt: Label ' and page number', Locked = true;
+        HFReplacesTxt: Label 'Replaces "%1", which this document uses today.', Comment = '%1 = header/footer name';
+        PreviewOnlyTxt: Label 'Preview only. Nothing has changed in your layouts yet.';
         HFBasedOnTxt: Label 'Built on Microsoft''s External Default Detailed design; fonts and colours follow the theme.';
         InSuggestion: Boolean;
         LookFromText: Text;
-        UseOn: Option ThisDocument,Group,Company;
         LookFromSuggestionTxt: Label 'Copilot suggestion "%1"', Comment = '%1 = theme name';
         LookFromDirectionTxt: Label 'Design direction "%1"', Comment = '%1 = direction';
         LookFromThemeTxt: Label 'Theme "%1"', Comment = '%1 = theme name';
-        NoGroupErr: Label 'The document in the preview does not belong to a document group. Choose This document or Company default.';
         LogoColorsJson: Text;
         CopilotAvailable: Boolean;
         SuggestionCount: Integer;
@@ -548,13 +627,14 @@ page 50109 "Report Style Start Tabs"
         CompanyInformationTableTok: Label '79', Locked = true;
         NoCompanyInformationErr: Label 'Company Information is not set up, so the logo cannot be saved.';
         DocumentText: Text;
-        PreviewCaptionTxt: Label '%1 · page 1 · not applied yet', Comment = '%1 = report name';
+        PreviewCaptionTxt: Label '%1 · page 1', Comment = '%1 = report name';
         DocumentTxt: Label '%1 (%2) · layout %3', Comment = '%1 = report name, %2 = report ID, %3 = layout name';
         NoDocumentTxt: Label 'No document chosen yet. Choose one to see the preview.';
         PreviewStatusText: Text;
         ViewerReady: Boolean;
         HFViewerReady: Boolean;
         StartTxt: Label 'Change a choice, or choose Update preview, to see the first page of the document here.';
+        BusyTxt: Label 'Showing page 1 of %1 with your choices. With a lot of data this can take a moment.', Comment = '%1 = report name';
         ZoomTipTxt: Label 'Click to see the page full size.';
         LastPdfBase64: Text;
 
@@ -562,8 +642,13 @@ page 50109 "Report Style Start Tabs"
     var
         ReportStyleCopilot: Codeunit "Report Style Copilot";
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        Approvals: Codeunit "Report Style Approvals";
     begin
         DesignerMgt.GetConfig(Rec);
+        // Only the user's own design: no paging to other users' designs (and no record navigation on the card).
+        Rec.FilterGroup(2);
+        Rec.SetRange("Primary Key", Rec."Primary Key");
+        Rec.FilterGroup(0);
         CopilotAvailable := ReportStyleCopilot.IsAvailable();
         LoadStoredSuggestions();
         // Start on the user's own theme, not on a Copilot suggestion left from browsing them last time;
@@ -572,14 +657,8 @@ page 50109 "Report Style Start Tabs"
             ResetToOwnTheme();
             Rec.Modify(true);
         end;
-        case Rec."Apply To" of
-            'group':
-                UseOn := UseOn::Group;
-            'company':
-                UseOn := UseOn::Company;
-            else
-                UseOn := UseOn::ThisDocument;
-        end;
+        // News about the user's own request (approved, rejected, activated) as a bar at the top, once.
+        Approvals.NotifyOwnRequest(Rec);
     end;
 
     // The trial logo or else the company logo on the picker's small pages, or a prompt when there is none.
@@ -745,6 +824,8 @@ page 50109 "Report Style Start Tabs"
     // The header and footer in words, and the options in step with the record (a direction changes them too).
     local procedure ComputeHeaderFooter()
     var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        CurrentHF: Text;
         Lines: TextBuilder;
         PagePart: Text;
         DatePart: Text;
@@ -803,6 +884,9 @@ page 50109 "Report Style Start Tabs"
             else
                 Lines.AppendLine(StrSubstNo(HFFooterContactTxt, FooterPage));
         end;
+        CurrentHF := DesignerMgt.CurrentHeaderFooter(Rec);
+        if (CurrentHF <> '') and (CurrentHF <> Rec."HF Name") then
+            Lines.AppendLine(StrSubstNo(HFReplacesTxt, CurrentHF));
         Lines.Append(HFBasedOnTxt);
         HeaderFooterText := Lines.ToText();
     end;
@@ -850,25 +934,6 @@ page 50109 "Report Style Start Tabs"
         Rec."Font Pair" := Rec."Font Pair"::KeepBase;
         Rec."Page Color" := Rec."Page Color"::KeepBase;
         Rec."Table Style" := Rec."Table Style"::KeepBase;
-    end;
-
-    local procedure SetUseOn()
-    var
-        DocGroups: Codeunit "Report Style Doc Groups";
-    begin
-        case UseOn of
-            UseOn::ThisDocument:
-                Rec."Apply To" := 'layout';
-            UseOn::Company:
-                Rec."Apply To" := 'company';
-            UseOn::Group:
-                begin
-                    Rec."Apply Group" := CopyStr(DocGroups.GroupOf(Rec."Target Report ID"), 1, MaxStrLen(Rec."Apply Group"));
-                    if Rec."Apply Group" = '' then
-                        Error(NoGroupErr);
-                    Rec."Apply To" := 'group';
-                end;
-        end;
     end;
 
     local procedure UpdateSuggestionBar()
@@ -930,7 +995,32 @@ page 50109 "Report Style Start Tabs"
 
     // Renders the chosen document with the current choices and shows page 1 as a picture (turned into PNG on the server).
     // The preview writes per-user layout settings and restores them, so it runs outside the page's write transaction.
+    // Shows the busy text on the preview first; the preview then asks for the render (RenderRequested), because the
+    // page cannot show anything while the server renders.
     local procedure UpdatePreview()
+    var
+        DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        BusyText: Text;
+    begin
+        if not (ViewerReady or HFViewerReady) then
+            exit;
+        BusyText := StrSubstNo(BusyTxt, DesignerMgt.GetReportCaption(Rec));
+        if ViewerReady then
+            CurrPage.PreviewViewer.ShowBusy(BusyText, true);
+        if HFViewerReady then
+            CurrPage.HFPreviewViewer.ShowBusy(BusyText, not ViewerReady);
+    end;
+
+    local procedure DownloadPreview(Format: ReportFormat)
+    var
+        Runner: Codeunit "Report Style Designer Runner";
+    begin
+        Rec.Modify(true);
+        Commit();
+        Runner.DownloadPreview(Rec, Format);
+    end;
+
+    local procedure RenderPreview()
     var
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
         Runner: Codeunit "Report Style Designer Runner";

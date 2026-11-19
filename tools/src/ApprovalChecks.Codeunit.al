@@ -63,7 +63,7 @@ codeunit 50139 "Approval Checks"
     [TryFunction]
     local procedure TryActivate(var Approval: Record "Report Style Approval")
     begin
-        Approvals.Activate(Approval);
+        Approvals.Activate(Approval, 2);
     end;
 
     [TryFunction]

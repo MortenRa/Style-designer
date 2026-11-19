@@ -1,6 +1,6 @@
 html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; background: transparent; }
 #controlAddIn { display: flex; flex-direction: column; }
-.pp-body { flex: 1 1 auto; min-height: 0; }
+.pp-body { flex: 1 1 auto; min-height: 0; position: relative; }
 .pp { height: 100%; box-sizing: border-box; padding: 4px; overflow: auto; }
 .pp canvas { display: block; margin: 0 auto; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
 .pp.page canvas, .pp.width canvas { cursor: zoom-in; }
@@ -22,3 +22,14 @@ html, body, #controlAddIn { margin: 0; height: 100%; overflow: hidden; backgroun
 .pp-leave { flex: 0 0 auto; font: inherit; font-size: 12px; background: none; border: 0; color: #0f6cbd; cursor: pointer; padding: 4px 6px; white-space: nowrap; }
 .pp-leave:hover { text-decoration: underline; }
 .pp-leave:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; }
+
+/* While the preview is made: a spinner and a line of text, over the last page if there is one */
+.pp-busy { display: flex; align-items: center; gap: 10px; padding: 24px 8px; font: 13px "Segoe UI", sans-serif; color: #323130; }
+.pp-busy.over { position: absolute; inset: 0; align-items: flex-start; padding-top: 40%; justify-content: center; background: rgba(255, 255, 255, .78); }
+.pp-spin { flex: 0 0 auto; width: 16px; height: 16px; border: 2px solid #c7e0f4; border-top-color: #0f6cbd; border-radius: 50%; animation: pp-spin .8s linear infinite; }
+@keyframes pp-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pp-spin { animation: none; } }
+
+/* "Preview only": nothing has changed for the customers yet */
+.pp-note { flex: 0 0 auto; align-self: center; margin: 0 4px 6px; padding: 3px 12px; border-radius: 999px; background: #fff4ce; color: #5c4400; border: 1px solid #f2d68a; font: 600 12px "Segoe UI", sans-serif; text-align: center; }
+.pp-note[hidden] { display: none; }

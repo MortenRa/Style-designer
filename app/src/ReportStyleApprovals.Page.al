@@ -8,6 +8,8 @@ using System.Utilities;
 page 50106 "Report Style Approvals"
 {
     Caption = 'Theme Approvals';
+    AboutTitle = 'Approve new looks before customers see them';
+    AboutText = 'Designers send their designs here. Preview a request, approve or reject it, and activate it when it should go live. Only Activate changes the documents your customers receive.';
     PageType = List;
     SourceTable = "Report Style Approval";
     SourceTableView = sorting("Entry No.") order(descending);
@@ -30,7 +32,7 @@ page 50106 "Report Style Approvals"
                     StyleExpr = StatusStyle;
                     ToolTip = 'Waiting for approval, approved, rejected, or active on the documents.';
                 }
-                field(Target; Rec.Target) { ToolTip = 'The documents that get the design when it is activated.'; }
+                field(Target; Rec.Target) { ToolTip = 'Before activation: the document the design was made on. After activation: the documents that got it.'; }
                 field(Change; Rec.Change) { ToolTip = 'What the design changes: the theme, the header and footer, or both.'; }
                 field("Theme Name"; Rec."Theme Name") { ToolTip = 'The theme that is saved with the request.'; }
                 field("Header/Footer Name"; Rec."Header/Footer Name") { ToolTip = 'The header and footer that are saved with the request.'; }
@@ -91,6 +93,8 @@ page 50106 "Report Style Approvals"
             {
                 ApplicationArea = All;
                 Caption = 'Reject';
+                AboutTitle = 'Say why';
+                AboutText = 'Write the reason in Comment before you reject. The designer sees it on Quick Start and knows what to change.';
                 ToolTip = 'Reject the design. Write the reason in Comment first, so the designer knows what to change.';
                 Image = Reject;
                 Enabled = (Rec.Status = Rec.Status::Pending) or (Rec.Status = Rec.Status::Approved);
@@ -107,17 +111,21 @@ page 50106 "Report Style Approvals"
             {
                 ApplicationArea = All;
                 Caption = 'Activate';
-                ToolTip = 'Use the approved design on its documents. From now on, customers receive documents with this look.';
+                AboutTitle = 'Activate is when it goes live';
+                AboutText = 'Approving only says yes. Activate is where you choose the documents (the one it was designed on, its group, or the company default) and when customers start receiving the new look.';
+                ToolTip = 'Choose which documents get the approved design and put it live. From then on, customers receive those documents with this look.';
                 Image = Start;
                 Enabled = Rec.Status = Rec.Status::Approved;
 
                 trigger OnAction()
                 var
                     Approvals: Codeunit "Report Style Approvals";
+                    ActivateDialog: Page "Report Style Activate";
                 begin
-                    if not Confirm(StrSubstNo(ActivateQst, Rec.Target), false) then
+                    ActivateDialog.SetApproval(Rec);
+                    if ActivateDialog.RunModal() <> Action::OK then
                         exit;
-                    Message(Approvals.Activate(Rec));
+                    Message(Approvals.Activate(Rec, ActivateDialog.GetUseOn()));
                     CurrPage.Update(false);
                 end;
             }
@@ -127,7 +135,6 @@ page 50106 "Report Style Approvals"
     var
         StatusStyle: Text;
         OwnRequestQst: Label 'You sent this design yourself. Approve it anyway?';
-        ActivateQst: Label 'This changes the documents customers receive: %1. Activate the design?', Comment = '%1 = the documents';
         PreviewFileTxt: Label 'Theme approval %1.pdf', Comment = '%1 = request number';
 
     trigger OnAfterGetRecord()

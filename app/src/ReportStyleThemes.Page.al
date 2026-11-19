@@ -27,17 +27,19 @@ page 50107 "Report Style Themes"
         }
     }
 
+    // A theme sent for approval is saved straight away, but is only offered here once it is approved.
     trigger OnOpenPage()
     var
         ReportLayoutList: Record "Report Layout List";
         DesignerMgt: Codeunit "Report Style Designer Mgt.";
+        Approvals: Codeunit "Report Style Approvals";
     begin
         ReportLayoutList.SetRange("Report ID", 2000000001);
         ReportLayoutList.SetRange("Layout Subtype", ReportLayoutList."Layout Subtype"::Theme);
         ReportLayoutList.SetFilter(Name, '<>Preview *');
         if ReportLayoutList.FindSet() then
             repeat
-                if DesignerMgt.IsUsableTheme(ReportLayoutList) then begin
+                if DesignerMgt.IsUsableTheme(ReportLayoutList) and not Approvals.IsThemeAwaitingApproval(ReportLayoutList.Name) then begin
                     Rec := ReportLayoutList;
                     Rec.Insert();
                 end;

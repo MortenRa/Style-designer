@@ -23,7 +23,9 @@ codeunit 50115 "Report Style Preview Step"
                 DesignerMgt.PreviewSetup(Rec, PreviewName, Previous, HadPrevious);
             'render':
                 begin
-                    DesignerMgt.PreviewRender(Rec, Pdf);
+                    if not FormatSet then
+                        OutputFormat := ReportFormat::Pdf;
+                    DesignerMgt.PreviewRender(Rec, OutputFormat, Pdf);
                     Rendered := true;
                     // A trial logo was put in Company Information for this render only: undo it with the transaction.
                     if UsedPreviewLogo then
@@ -38,6 +40,8 @@ codeunit 50115 "Report Style Preview Step"
         Previous: Record "Tenant Report Layout Selection" temporary;
         Pdf: Codeunit "Temp Blob";
         Step: Text;
+        OutputFormat: ReportFormat;
+        FormatSet: Boolean;
         PreviewName: Text[250];
         HadPrevious: Boolean;
         UsedPreviewLogo: Boolean;
@@ -48,6 +52,13 @@ codeunit 50115 "Report Style Preview Step"
     procedure SetStep(NewStep: Text)
     begin
         Step := NewStep;
+    end;
+
+    /// The format the render step produces. PDF when not set.
+    procedure SetFormat(NewFormat: ReportFormat)
+    begin
+        OutputFormat := NewFormat;
+        FormatSet := true;
     end;
 
     /// True when the render used a trial logo and was rolled back on purpose: the PDF is still there.
