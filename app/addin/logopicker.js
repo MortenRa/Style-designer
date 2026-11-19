@@ -37,10 +37,12 @@ function render() {
         pick.setAttribute('aria-pressed', p[0] === picker.current ? 'true' : 'false');
         pick.appendChild(sheet(p[0]));
         pick.appendChild(text('span', p[1], 'lp-cap'));
+        // The marked placement too: the page opens without a preview, so a click on it shows one.
         pick.addEventListener('click', function () {
-            if (picker.current === p[0]) return;
-            picker.current = p[0];
-            render();
+            if (picker.current !== p[0]) {
+                picker.current = p[0];
+                render();
+            }
             Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('PlacementChosen', [p[0]]);
         });
         row.appendChild(pick);
