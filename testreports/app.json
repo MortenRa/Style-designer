@@ -1,0 +1,16 @@
+{
+  "id": "5d0f3a7e-2c41-4b8e-9a63-7e1f0c9b2a15",
+  "name": "Theme Designer Test Reports",
+  "publisher": "Abakion",
+  "version": "1.0.0.0",
+  "brief": "Inventory reports with the new body layouts from BCApps PR #11205, renumbered, to test Theme Designer. Not for shipping.",
+  "description": "Reports 708, 713, 714 and 718 as 50150-50153 with only their body (Subtype = Body) layout. Install in a sandbox next to Theme Designer to test themes and header/footer parts on more documents.",
+  "privacyStatement": "", "EULA": "", "help": "", "url": "",
+  "platform": "29.0.0.0",
+  "dependencies": [ { "id": "437dbf0e-84ff-417a-965d-ed2bb9650972", "name": "Base Application", "publisher": "Microsoft", "version": "29.0.0.0" } ],
+  "idRanges": [ { "from": 50150, "to": 50159 } ],
+  "runtime": "18.0",
+  "target": "Cloud",
+  "features": [ "NoImplicitWith" ],
+  "resourceExposurePolicy": { "allowDebugging": true, "allowDownloadingSource": true, "includeSourceInSymbolFile": true }
+}

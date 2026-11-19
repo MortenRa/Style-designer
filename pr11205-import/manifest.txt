@@ -1,0 +1,4 @@
+713|PR11205 Body-only: Inventory Customer Sales Word|Body|Body-only: Inventory Customer Sales Word|InventoryCustomerSalesBody.docx
+708|PR11205 Body-only: Inventory Order Details Word|Body|Body-only: Inventory Order Details Word|InventoryOrderDetailsBody.docx
+718|PR11205 Body-only: Inventory - Sales Back Orders Word|Body|Body-only: Inventory - Sales Back Orders Word|InventorySalesBackOrdersBody.docx
+714|PR11205 Body-only: Inventory - Vendor Purchases Word|Body|Body-only: Inventory - Vendor Purchases Word|InventoryVendorPurchasesBody.docx
