@@ -59,6 +59,28 @@ page 50105 "Report Style Start"
                         LogoColorsJson := Colors;
                     end;
                 }
+                // The logo comes with a whole header and footer; say so in words. The details are in the designer.
+                field(HeaderFooterSummary; HeaderFooterText)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Header and footer';
+                    Editable = false;
+                    MultiLine = true;
+                    Style = Subordinate;
+                    ToolTip = 'What the header and footer of the documents show. Page number, footer, date and accent line are changed in the designer.';
+                }
+                field(ChangeHeaderFooter; ChangeHeaderFooterTxt)
+                {
+                    ApplicationArea = All;
+                    ShowCaption = false;
+                    Editable = false;
+                    ToolTip = 'Open the designer to change the page number, footer, date and accent line.';
+
+                    trigger OnDrillDown()
+                    begin
+                        OpenTheDesigner();
+                    end;
+                }
             }
             group(DirectionGroup)
             {
@@ -180,84 +202,6 @@ page 50105 "Report Style Start"
 
                     trigger OnValidate()
                     begin
-                        RefreshAdvice();
-                    end;
-                }
-            }
-            group(Layout)
-            {
-                Caption = 'Header and footer';
-                // In words, so it is clear the logo comes with a whole header and footer.
-                field(HeaderFooterSummary; HeaderFooterText)
-                {
-                    ApplicationArea = All;
-                    ShowCaption = false;
-                    Editable = false;
-                    MultiLine = true;
-                    Style = Subordinate;
-                    ToolTip = 'What the header and footer of the documents show with these choices.';
-                }
-                field(PageNumber; PageNumberChoice)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Page number';
-                    OptionCaption = 'In the header,In the footer,None';
-                    ToolTip = 'Where the page number goes.';
-
-                    trigger OnValidate()
-                    begin
-                        case PageNumberChoice of
-                            PageNumberChoice::Header:
-                                Rec."HF Page Number" := 'header';
-                            PageNumberChoice::Footer:
-                                Rec."HF Page Number" := 'footer';
-                            PageNumberChoice::None:
-                                Rec."HF Page Number" := 'none';
-                        end;
-                        Rec."Header Mode" := 'design';
-                        RefreshAdvice();
-                    end;
-                }
-                field(Footer; FooterChoice)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Footer';
-                    OptionCaption = 'Contact details,Contact and bank details,No footer';
-                    ToolTip = 'What the footer shows: the company contact details from Company Information, also the bank details, or nothing.';
-
-                    trigger OnValidate()
-                    begin
-                        case FooterChoice of
-                            FooterChoice::Contact:
-                                Rec."HF Footer" := 'contact';
-                            FooterChoice::Bank:
-                                Rec."HF Footer" := 'bank';
-                            FooterChoice::None:
-                                Rec."HF Footer" := 'none';
-                        end;
-                        Rec."Header Mode" := 'design';
-                        RefreshAdvice();
-                    end;
-                }
-                field("HF Show Date"; Rec."HF Show Date")
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Show the date in the header.';
-
-                    trigger OnValidate()
-                    begin
-                        Rec."Header Mode" := 'design';
-                        RefreshAdvice();
-                    end;
-                }
-                field("HF Accent Line"; Rec."HF Accent Line")
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Draw a coloured line under the header.';
-
-                    trigger OnValidate()
-                    begin
-                        Rec."Header Mode" := 'design';
                         RefreshAdvice();
                     end;
                 }
@@ -435,12 +379,8 @@ page 50105 "Report Style Start"
                 ToolTip = 'See your documents with these choices and send the design for approval. More options are in the designer.';
 
                 trigger OnAction()
-                var
-                    Designer: Page "Report Style Designer";
                 begin
-                    Rec.Modify(true);
-                    Commit();
-                    Designer.Run();
+                    OpenTheDesigner();
                 end;
             }
         }
@@ -453,7 +393,8 @@ page 50105 "Report Style Start"
         HeaderFooterText: Text;
         PageNumberChoice: Option Header,Footer,None;
         FooterChoice: Option Contact,Bank,None;
-        HFUnchangedTxt: Label 'Unchanged: the documents keep the header and footer they have today. Choose a logo position, a design direction or one of the options below to design your own.';
+        HFUnchangedTxt: Label 'Unchanged: the documents keep the header and footer they have today. Choosing a logo position or a design direction gives them a new one.';
+        ChangeHeaderFooterTxt: Label 'Change header and footer in the designer';
         HFHeaderTxt: Label 'Header: report title%1%2%3.', Comment = '%1 = page number part, %2 = date part, %3 = logo part';
         HFPageNumberTxt: Label ', page number', Locked = true;
         HFDateTxt: Label ', date', Locked = true;
@@ -509,6 +450,12 @@ page 50105 "Report Style Start"
         DesignerMgt.GetConfig(Rec);
         CopilotAvailable := ReportStyleCopilot.IsAvailable();
         LoadStoredSuggestions();
+        // Start on the user's own theme, not on a Copilot suggestion left from browsing them last time;
+        // the suggestions stay one click away on the preview.
+        if SuggestionIndex <> 0 then begin
+            ResetToOwnTheme();
+            Rec.Modify(true);
+        end;
         case Rec."Apply To" of
             'group':
                 UseOn := UseOn::Group;
@@ -625,6 +572,15 @@ page 50105 "Report Style Start"
         end;
     end;
 
+    local procedure OpenTheDesigner()
+    var
+        Designer: Page "Report Style Designer";
+    begin
+        Rec.Modify(true);
+        Commit();
+        Designer.Run();
+    end;
+
     // The header and footer in words, and the options in step with the record (a direction changes them too).
     local procedure ComputeHeaderFooter()
     var
@@ -716,6 +672,12 @@ page 50105 "Report Style Start"
     // "Use my theme" on the bar: the chosen theme as it is, without the suggestion's colours and fonts.
     local procedure UseMyTheme()
     begin
+        ResetToOwnTheme();
+        RefreshAdvice();
+    end;
+
+    local procedure ResetToOwnTheme()
+    begin
         LeaveSuggestion();
         if Rec."Own Theme" <> '' then
             Rec."Base Theme" := Rec."Own Theme";
@@ -727,7 +689,6 @@ page 50105 "Report Style Start"
         Rec."Font Pair" := Rec."Font Pair"::KeepBase;
         Rec."Page Color" := Rec."Page Color"::KeepBase;
         Rec."Table Style" := Rec."Table Style"::KeepBase;
-        RefreshAdvice();
     end;
 
     local procedure SetUseOn()
